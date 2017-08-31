@@ -1,0 +1,6 @@
+# dev requirements
+pytest
+pytest-asyncio
+
+# install setup.py
+-e .
