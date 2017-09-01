@@ -125,6 +125,59 @@ def test_error_handler_reports():
         logger.exception('division error')
 
 
+def test_error_handler_reports_multiple_exceptions():
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                '()': ExtraDataLogFormatter,
+                'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
+            },
+        },
+        'filters': {
+            'upload_errors_s3': {
+                '()': AddExceptionReportFilter(),
+            },
+        },
+        'handlers': {
+            'console': {
+                'level': 'DEBUG',
+                'filters': ['upload_errors_s3'],
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard'
+            },
+        },
+        'loggers': {
+            '': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True
+            }
+        }
+    }
+    dictConfig(LOGGING)
+
+    logger = logging.getLogger(__name__)
+
+    def a(foo):
+        try:
+            b(foo)
+        except:
+            raise SpecialException('second problem')
+
+    def b(foo):
+        c(foo)
+
+    def c(foo):
+        raise SpecialException('original problem')
+
+    try:
+        a('bar')
+    except:
+        logger.exception("There were multiple problems")
+
+
 class SpecialException(Exception):
     pass
 

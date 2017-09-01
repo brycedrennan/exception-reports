@@ -3,12 +3,12 @@ import logging
 import re
 import sys
 from html import escape
+from pathlib import Path
 from pprint import pformat
 
 import jinja2
 import six
 
-from exception_reports.templates import TECHNICAL_500_TEMPLATE
 from exception_reports.utils import force_text
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,18 @@ def exception_handler(exc_type, exc_value, traceback):
     ExceptionReporter(exc_type, exc_value, traceback)
 
 
+CURRENT_DIR = Path(__file__).parent
+
+with open(CURRENT_DIR / 'report_template.html', 'r') as f:
+    TECHNICAL_500_TEMPLATE = f.read()
+    TECHNICAL_500_TEMPLATE = re.sub(r'\s{2,}', ' ', TECHNICAL_500_TEMPLATE)
+    TECHNICAL_500_TEMPLATE = re.sub(r'\n', '', TECHNICAL_500_TEMPLATE)
+    TECHNICAL_500_TEMPLATE = re.sub(r'> <', '><', TECHNICAL_500_TEMPLATE)
+
+
 def render_exception_report(exception_data):
     jinja_env = jinja2.Environment(loader=jinja2.BaseLoader())
+    exception_data['repr'] = repr
     return jinja_env.from_string(TECHNICAL_500_TEMPLATE).render(exception_data)
 
 
@@ -152,11 +162,9 @@ class ExceptionReporter(object):
         if not exceptions:
             return frames
 
-        # In case there's just one exception (always in Python 2,
-        # sometimes in Python 3), take the traceback from self.tb (Python 2
-        # doesn't have a __traceback__ attribute on Exception)
+        # In case there's just one exception, take the traceback from self.tb
         exc_value = exceptions.pop()
-        tb = self.tb if six.PY2 or not exceptions else exc_value.__traceback__
+        tb = self.tb if not exceptions else exc_value.__traceback__
 
         while tb is not None:
             # Support for __traceback_hide__ which is used by a few libraries
@@ -172,28 +180,30 @@ class ExceptionReporter(object):
             pre_context_lineno, pre_context, context_line, post_context = self._get_lines_from_file(
                 filename, lineno, 7, loader, module_name,
             )
-            if pre_context_lineno is not None:
-                frames.append({
-                    'exc_cause': explicit_or_implicit_cause(exc_value),
-                    'exc_cause_explicit': getattr(exc_value, '__cause__', True),
-                    'tb': tb,
-                    'type': 'django' if module_name.startswith('django.') else 'user',
-                    'filename': filename,
-                    'function': function,
-                    'lineno': lineno + 1,
-                    'vars': list(tb.tb_frame.f_locals.items()),
-                    'id': id(tb),
-                    'pre_context': pre_context,
-                    'context_line': context_line,
-                    'post_context': post_context,
-                    'pre_context_lineno': pre_context_lineno + 1,
-                })
+            if pre_context_lineno is None:
+                pre_context_lineno = lineno
+                pre_context = []
+                context_line = '<source code not available>'
+                post_context = []
+            frames.append({
+                'exc_cause': explicit_or_implicit_cause(exc_value),
+                'exc_cause_explicit': getattr(exc_value, '__cause__', True),
+                'tb': tb,
+                'type': 'django' if module_name.startswith('django.') else 'user',
+                'filename': filename,
+                'function': function,
+                'lineno': lineno + 1,
+                'vars': list(tb.tb_frame.f_locals.items()),
+                'id': id(tb),
+                'pre_context': pre_context,
+                'context_line': context_line,
+                'post_context': post_context,
+                'pre_context_lineno': pre_context_lineno + 1,
+            })
 
             # If the traceback for current exception is consumed, try the
             # other exception.
-            if six.PY2:
-                tb = tb.tb_next
-            elif not tb.tb_next and exceptions:
+            if not tb.tb_next and exceptions:
                 exc_value = exceptions.pop()
                 tb = exc_value.__traceback__
             else:
