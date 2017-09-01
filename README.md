@@ -143,4 +143,6 @@ raise Exception("YOLO!!!!")
 
     git tag 0.1
     git push --tags
-    python setup.py sdist upload -r pypi
+    python setup.py bdist_wheel
+    twine upload dist/* -u username
+    
