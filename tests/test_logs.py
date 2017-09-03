@@ -43,7 +43,7 @@ def test_s3_error_handler():
     logger = logging.getLogger(__name__)
 
     logger.info('this is information')
-    assert len(responses.calls) == 0
+    assert not responses.calls
 
     logger.error('this is a problem')
     assert len(responses.calls) == 1
@@ -60,7 +60,7 @@ def test_error_handler_reports(tmpdir):
 
     logger = logging.getLogger(__name__)
 
-    assert len(tmpdir.listdir()) == 0
+    assert not tmpdir.listdir()
 
     logger.error('this is a problem')
 
@@ -125,7 +125,7 @@ async def test_async_handler(event_loop):
     container = {'num': 0}
 
     async def process_number(n, sum_container):
-        await asyncio.sleep(0.000002 * n)
+        await asyncio.sleep(0.002 * n)
         container['num'] = n
 
         print(n)

@@ -5,7 +5,7 @@ __version__ = '0.1.2'
 setup(
     name="exception-reports",
     packages=["exception_reports"],
-    package_data = {'exception_reports': ['report_template.html']},
+    package_data={'exception_reports': ['report_template.html']},
     version=__version__,
     description="Interactive stacktraces with variable values at each level.",
     author="Bryce Drennan, CircleUp",

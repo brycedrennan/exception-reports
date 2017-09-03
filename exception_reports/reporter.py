@@ -34,10 +34,11 @@ class ExceptionReporter(object):
     A class to organize and coordinate reporting on exceptions.
     """
 
-    def __init__(self, exc_type=None, exc_value=None, tb=None):
+    def __init__(self, exc_type=None, exc_value=None, tb=None, get_full_tb=True):
         self.exc_type = exc_type
         self.exc_value = exc_value
         self.tb = tb
+        self.get_full_tb = get_full_tb
 
         if not tb:
             self.exc_type, self.exc_value, self.tb = sys.exc_info()
@@ -53,7 +54,10 @@ class ExceptionReporter(object):
                     try:
                         v = pformat(v)
                     except Exception as e:
-                        v = repr(e)
+                        try:
+                            v = repr(e)
+                        except Exception as e1:
+                            v = 'An error occurred rendering the exception of type: ' + repr(e.__class__)
                     # The force_escape filter assume unicode, make sure that works
                     if isinstance(v, bytes):
                         v = v.decode('utf-8', 'replace')  # don't choke on non-utf-8 input
@@ -90,10 +94,6 @@ class ExceptionReporter(object):
         if frames:
             c['lastframe'] = frames[-1]
         return c
-
-    def get_traceback_html(self):
-        """Return HTML version of stack trace"""
-        return render_exception_report(self.get_traceback_data())
 
     def _get_lines_from_file(self, filename, lineno, context_lines, loader=None, module_name=None):
         """
@@ -202,7 +202,7 @@ class ExceptionReporter(object):
             else:
                 tb = tb.tb_next
 
-            if tb is None and not added_full_tb:
+            if self.get_full_tb and tb is None and not added_full_tb:
                 exc_value = Exception('Full Stack Trace')
                 exc_value.is_full_stack_trace = True
                 exc_value.__cause__ = Exception('Full Stack Trace')
@@ -210,19 +210,3 @@ class ExceptionReporter(object):
                 added_full_tb = True
 
         return frames
-
-    def exception_filename(self):
-        import uuid
-        return str(uuid.uuid4().hex) + str(uuid.uuid4().hex)
-
-    def format_exception(self):
-        """
-        Return the same data as from traceback.format_exception.
-        """
-        import traceback
-        frames = self.get_traceback_frames()
-        tb = [(f['filename'], f['lineno'], f['function'], f['context_line']) for f in frames]
-        list = ['Traceback (most recent call last):\n']
-        list += traceback.format_list(tb)
-        list += traceback.format_exception_only(self.exc_type, self.exc_value)
-        return list

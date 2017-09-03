@@ -11,9 +11,11 @@ from exception_reports.traceback import get_logger_traceback
 
 logger = logging.getLogger(__name__)
 
+
 class ExceptionReportConfigurationError(Exception):
     """For misconfigurations of the exception_reports library"""
     pass
+
 
 def uncaught_exception_handler(exc_type, exc_value, exc_traceback):
     logger.error("Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
@@ -73,7 +75,6 @@ class _AddExceptionReportFilter(AddExceptionDataFilter):
 def AddExceptionReportFilter(output_path='/tmp/python-error-reports/', output_html=True):
     _output_path = output_path
     _output_html = output_html
-
 
     class GeneratedFilter(_AddExceptionReportFilter):
         output_path = _output_path
