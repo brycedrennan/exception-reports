@@ -34,8 +34,10 @@ class AddExceptionDataFilter(logging.Filter):
             exc_info = record.exc_info or (None, record.getMessage(), get_logger_traceback())
             try:
                 record.data['exception_data'] = ExceptionReporter(*exc_info).get_traceback_data()
-            except:
-                logger.warning("Error getting traceback data")
+            except Exception as e:
+                logger.warning("Error getting traceback data" + repr(e))
+                raise
+
         return True
 
 

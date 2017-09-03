@@ -4,5 +4,6 @@
 .cache
 *.egg-info
 __pycache___
-dist
-build
+dist/
+build/
+.tox

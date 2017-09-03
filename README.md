@@ -7,6 +7,8 @@ Generate an interactive stack trace that includes variable values at each level.
  - Get all the context you need to understand what caused an exception
  - Get full stack traces for logger.error calls (not just for exceptions)
  - Exception reports can output to either the local filesystem or S3
+ - Normal python tracebacks only show the stack up to where an exception was caught, 
+   this library extends those traceback to show the entire stack.
 
 ## Installation
 

@@ -327,7 +327,9 @@
             {% for frame in frames %}
                 {% if watcher['cause'] != frame.exc_cause %}{% if frame.exc_cause %}
                     <li><h3>
-                        {% if frame.exc_cause_explicit %}
+                        {% if frame.is_full_stack_trace %}
+                            Full Stack Trace
+                        {% elif frame.exc_cause_explicit %}
                             The above exception ({{ frame.exc_cause }}) was the direct cause of the following exception:
                         {% else %}
                             During handling of the above exception ({{ repr(frame.exc_cause) }}), another exception occurred:
