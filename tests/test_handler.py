@@ -1,10 +1,13 @@
 import asyncio
 import logging
+import re
+from copy import deepcopy
 from logging.config import dictConfig
 
 import pytest
-
-from exception_reports.logs import ExtraDataLogFormatter, AddS3ExceptionReportFilter, AddExceptionReportFilter, async_exception_handler
+import responses
+from exception_reports.logs import AddS3ExceptionReportFilter, AddExceptionReportFilter, async_exception_handler, DEFAULT_LOGGING_CONFIG, ExceptionReportConfigurationError, \
+    AddExceptionDataFilter
 from exception_reports.reporter import ExceptionReporter
 
 
@@ -37,126 +40,65 @@ def test_exception_report_data():
         assert local_vars['green'] == '93'
 
 
+def test_s3_filter_requires_setup():
+    with pytest.raises(ExceptionReportConfigurationError):
+        AddS3ExceptionReportFilter(
+            s3_access_key='',
+            s3_secret_key='',
+            s3_bucket='',
+            s3_prefix='all-exceptions/'
+        )
+
+
+@responses.activate
 def test_s3_error_handler():
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'standard': {
-                '()': ExtraDataLogFormatter,
-                'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
-            },
-        },
-        'filters': {
-            'upload_errors_s3': {
-                '()': AddS3ExceptionReportFilter(
-                    s3_access_key='',
-                    s3_secret_key='',
-                    s3_bucket='',
-                    s3_prefix='all-exceptions/'
-                ),
-            },
-        },
-        'handlers': {
-            'console': {
-                'level': 'DEBUG',
-                'filters': ['upload_errors_s3'],
-                'class': 'logging.StreamHandler',
-                'formatter': 'standard'
-            },
-        },
-        'loggers': {
-            '': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propagate': True
-            }
-        }
+    logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
+    logging_config['filters']['add_exception_report'] = {
+        '()': AddS3ExceptionReportFilter(
+            s3_access_key='access_key',
+            s3_secret_key='secret_key',
+            s3_bucket='my_bucket',
+            s3_prefix='all-exceptions/'
+        ),
     }
-    dictConfig(LOGGING)
+
+    dictConfig(logging_config)
+
+    responses.add(responses.PUT, re.compile(r'https://my_bucket.s3.amazonaws.com/all-exceptions/.*'), status=200)
 
     logger = logging.getLogger(__name__)
 
     logger.info('this is information')
+    assert len(responses.calls) == 0
+
     logger.error('this is a problem')
+    assert len(responses.calls) == 1
+    assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
 
 
-def test_error_handler_reports():
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'standard': {
-                '()': ExtraDataLogFormatter,
-                'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
-            },
-        },
-        'filters': {
-            'upload_errors_s3': {
-                '()': AddExceptionReportFilter(),
-            },
-        },
-        'handlers': {
-            'console': {
-                'level': 'DEBUG',
-                'filters': ['upload_errors_s3'],
-                'class': 'logging.StreamHandler',
-                'formatter': 'standard'
-            },
-        },
-        'loggers': {
-            '': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propagate': True
-            }
-        }
+def test_error_handler_reports(tmpdir):
+    logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
+
+    logging_config['filters']['add_exception_report'] = {
+        '()': AddExceptionReportFilter(output_path=tmpdir),
     }
-    dictConfig(LOGGING)
+    dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
 
-    logger.info('this is information')
+    assert len(tmpdir.listdir()) == 0
+
     logger.error('this is a problem')
 
-    try:
-        raise ZeroDivisionError
-    except Exception:
-        logger.exception('division error')
+    assert len(tmpdir.listdir()) == 1
 
 
-def test_error_handler_reports_multiple_exceptions():
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'standard': {
-                '()': ExtraDataLogFormatter,
-                'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
-            },
-        },
-        'filters': {
-            'upload_errors_s3': {
-                '()': AddExceptionReportFilter(),
-            },
-        },
-        'handlers': {
-            'console': {
-                'level': 'DEBUG',
-                'filters': ['upload_errors_s3'],
-                'class': 'logging.StreamHandler',
-                'formatter': 'standard'
-            },
-        },
-        'loggers': {
-            '': {
-                'handlers': ['console'],
-                'level': 'INFO',
-                'propagate': True
-            }
-        }
+def test_error_handler_reports_multiple_exceptions(tmpdir):
+    logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
+    logging_config['filters']['add_exception_report'] = {
+        '()': AddExceptionReportFilter(output_path=tmpdir),
     }
-    dictConfig(LOGGING)
+    dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
 
@@ -182,7 +124,7 @@ class SpecialException(Exception):
     pass
 
 
-@pytest.mark.xfail(raises=RuntimeError)
+@pytest.mark.xfail(raises=(RuntimeError,))
 @pytest.mark.asyncio
 async def test_async_handler(event_loop):
     """
@@ -191,68 +133,41 @@ async def test_async_handler(event_loop):
     You shouldn't see numbers past 10 printed
     """
 
-    async def do_stuff(event_loop):
-        LOGGING = {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'formatters': {
-                'standard': {
-                    '()': ExtraDataLogFormatter,
-                    'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
-                },
-            },
-            'filters': {
-                'upload_errors_s3': {
-                    '()': AddExceptionReportFilter(),
-                },
-            },
-            'handlers': {
-                'console': {
-                    'level': 'DEBUG',
-                    'filters': ['upload_errors_s3'],
-                    'class': 'logging.StreamHandler',
-                    'formatter': 'standard'
-                },
-            },
-            'loggers': {
-                '': {
-                    'handlers': ['console'],
-                    'level': 'INFO',
-                    'propagate': True
-                }
-            }
-        }
-        dictConfig(LOGGING)
+    logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-        event_loop.set_exception_handler(async_exception_handler)
+    logging_config['filters']['add_exception_report'] = {
+        '()': AddExceptionDataFilter,
+    }
+    dictConfig(logging_config)
 
-        todo_queue = asyncio.Queue(loop=event_loop)
-        for num in range(20):
-            todo_queue.put_nowait(num)
+    event_loop.set_exception_handler(async_exception_handler)
 
-        def task_done_callback(fut: asyncio.Future):
-            try:
-                fut.result()
-            finally:
-                todo_queue.task_done()
+    todo_queue = asyncio.Queue(loop=event_loop)
+    for num in range(20):
+        todo_queue.put_nowait(num)
 
-        container = {'num': 0}
+    def task_done_callback(fut: asyncio.Future):
+        try:
+            fut.result()
+        finally:
+            todo_queue.task_done()
 
-        async def process_number(n, sum_container):
-            await asyncio.sleep(0.05 * n)
-            sum_container['num'] = n
-            print(n)
-            if n == 10:
-                raise SpecialException('Something has gone terribly wrong')
-            return n + 1
+    container = {'num': 0}
 
-        while not todo_queue.empty():
-            num = todo_queue.get_nowait()
+    async def process_number(n, sum_container):
+        await asyncio.sleep(0.000002 * n)
+        container['num'] = n
 
-            collection_task = asyncio.ensure_future(process_number(num, container), loop=event_loop)
+        print(n)
+        if n == 10:
+            raise SpecialException('Something has gone terribly wrong')
 
-            collection_task.add_done_callback(task_done_callback)
+        return n + 1
 
-        await todo_queue.join()
+    while not todo_queue.empty():
+        num = todo_queue.get_nowait()
 
-    await do_stuff(event_loop)
+        collection_task = asyncio.ensure_future(process_number(num, container), loop=event_loop)
+        collection_task.add_done_callback(task_done_callback)
+
+    await todo_queue.join()
