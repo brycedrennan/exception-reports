@@ -1,6 +1,6 @@
 from setuptools import setup
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 setup(
     name="exception-reports",
@@ -16,5 +16,5 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3.6",
     ],
-    install_requires=['six', 'jinja2', 'tinys3'],
+    install_requires=['jinja2', 'tinys3'],
 )

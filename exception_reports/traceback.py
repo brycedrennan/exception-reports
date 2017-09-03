@@ -10,7 +10,6 @@ def get_logger_traceback():
     lower than the logging call.
 
     """
-    __traceback_hide__ = True
     try:
         raise ZeroDivisionError
     except ZeroDivisionError:

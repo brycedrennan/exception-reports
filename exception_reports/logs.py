@@ -5,7 +5,6 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-import six
 import tinys3
 
 from exception_reports.reporter import ExceptionReporter, render_exception_report
@@ -27,7 +26,6 @@ class AddExceptionDataFilter(logging.Filter):
     """A filter which makes sure debug info has been uploaded to S3 for ERROR or higher logs."""
 
     def filter(self, record):
-        __traceback_hide__ = True
         if record.levelno >= logging.ERROR:
             if not getattr(record, 'data', None):
                 record.data = {}
@@ -36,7 +34,6 @@ class AddExceptionDataFilter(logging.Filter):
                 record.data['exception_data'] = ExceptionReporter(*exc_info).get_traceback_data()
             except Exception as e:
                 logger.warning("Error getting traceback data" + repr(e))
-                raise
 
         return True
 
@@ -123,7 +120,7 @@ class ExtraDataLogFormatter(logging.Formatter):
         if data:
             try:
                 record.data_as_kv = ' '.join(
-                    [u'{}="{}"'.format(k, v.strip() if isinstance(v, six.string_types) else v)
+                    [u'{}="{}"'.format(k, v.strip() if isinstance(v, str) else v)
                      for k, v in sorted(data.items()) if v is not None])
             except AttributeError:
                 # Output something, even if 'data' wasn't a dictionary.

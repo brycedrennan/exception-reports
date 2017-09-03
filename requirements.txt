@@ -1,6 +1,11 @@
 # dev requirements
 pytest
 pytest-asyncio
+pydocstyle
+pylint
+pylama
+pylama_pylint
+tox
 
 # install setup.py
 -e .

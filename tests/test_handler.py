@@ -13,14 +13,14 @@ def test_exception_report_data():
         pass
 
     def a(foo):
-        bar = 'hey there'
+        bar = 'hey there'  # noqa
         b(foo)
 
     def b(foo):
         c(foo)
 
     def c(foo):
-        green = 93
+        green = 93  # noqa
         raise CustomException('yolo!')
 
     try:
@@ -163,7 +163,7 @@ def test_error_handler_reports_multiple_exceptions():
     def a(foo):
         try:
             b(foo)
-        except:
+        except Exception as e:
             raise SpecialException('second problem')
 
     def b(foo):
@@ -174,7 +174,7 @@ def test_error_handler_reports_multiple_exceptions():
 
     try:
         a('bar')
-    except:
+    except Exception as e:
         logger.exception("There were multiple problems")
 
 
