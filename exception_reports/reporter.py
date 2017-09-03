@@ -9,6 +9,7 @@ from pprint import pformat
 import jinja2
 import six
 
+from exception_reports.traceback import get_logger_traceback
 from exception_reports.utils import force_text
 
 logger = logging.getLogger(__name__)
@@ -165,7 +166,7 @@ class ExceptionReporter(object):
         # In case there's just one exception, take the traceback from self.tb
         exc_value = exceptions.pop()
         tb = self.tb if not exceptions else exc_value.__traceback__
-
+        added_full_tb = False
         while tb is not None:
             # Support for __traceback_hide__ which is used by a few libraries
             # to hide internal frames.
@@ -188,6 +189,7 @@ class ExceptionReporter(object):
             frames.append({
                 'exc_cause': explicit_or_implicit_cause(exc_value),
                 'exc_cause_explicit': getattr(exc_value, '__cause__', True),
+                'is_full_stack_trace': getattr(exc_value, 'is_full_stack_trace', False),
                 'tb': tb,
                 'type': 'django' if module_name.startswith('django.') else 'user',
                 'filename': filename,
@@ -208,6 +210,13 @@ class ExceptionReporter(object):
                 tb = exc_value.__traceback__
             else:
                 tb = tb.tb_next
+
+            if tb is None and not added_full_tb:
+                exc_value = Exception('Full Stack Trace')
+                exc_value.is_full_stack_trace = True
+                exc_value.__cause__ = Exception('Full Stack Trace')
+                tb = get_logger_traceback()
+                added_full_tb = True
 
         return frames
 
