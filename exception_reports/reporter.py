@@ -2,26 +2,21 @@ import datetime
 import logging
 import re
 import sys
+from contextlib import suppress
 from html import escape
 from pathlib import Path
 from pprint import pformat
 
 import jinja2
-import six
 
 from exception_reports.traceback import get_logger_traceback
 from exception_reports.utils import force_text
 
 logger = logging.getLogger(__name__)
 
+_CURRENT_DIR = Path(__file__).parent
 
-def exception_handler(exc_type, exc_value, traceback):
-    ExceptionReporter(exc_type, exc_value, traceback)
-
-
-CURRENT_DIR = Path(__file__).parent
-
-with open(CURRENT_DIR / 'report_template.html', 'r') as f:
+with open(_CURRENT_DIR / 'report_template.html', 'r') as f:
     TECHNICAL_500_TEMPLATE = f.read()
     TECHNICAL_500_TEMPLATE = re.sub(r'\s{2,}', ' ', TECHNICAL_500_TEMPLATE)
     TECHNICAL_500_TEMPLATE = re.sub(r'\n', '', TECHNICAL_500_TEMPLATE)
@@ -39,10 +34,11 @@ class ExceptionReporter(object):
     A class to organize and coordinate reporting on exceptions.
     """
 
-    def __init__(self, exc_type=None, exc_value=None, tb=None):
+    def __init__(self, exc_type=None, exc_value=None, tb=None, get_full_tb=True):
         self.exc_type = exc_type
         self.exc_value = exc_value
         self.tb = tb
+        self.get_full_tb = get_full_tb
 
         if not tb:
             self.exc_type, self.exc_value, self.tb = sys.exc_info()
@@ -58,7 +54,10 @@ class ExceptionReporter(object):
                     try:
                         v = pformat(v)
                     except Exception as e:
-                        v = repr(e)
+                        try:
+                            v = repr(e)
+                        except Exception as e1:
+                            v = 'An error occurred rendering the exception of type: ' + repr(e.__class__)
                     # The force_escape filter assume unicode, make sure that works
                     if isinstance(v, bytes):
                         v = v.decode('utf-8', 'replace')  # don't choke on non-utf-8 input
@@ -96,10 +95,6 @@ class ExceptionReporter(object):
             c['lastframe'] = frames[-1]
         return c
 
-    def get_traceback_html(self):
-        """Return HTML version of stack trace"""
-        return render_exception_report(self.get_traceback_data())
-
     def _get_lines_from_file(self, filename, lineno, context_lines, loader=None, module_name=None):
         """
         Returns context_lines before and after lineno from file.
@@ -107,25 +102,21 @@ class ExceptionReporter(object):
         """
         source = None
         if loader is not None and hasattr(loader, "get_source"):
-            try:
+            with suppress(ImportError):
                 source = loader.get_source(module_name)
-            except ImportError:
-                pass
             if source is not None:
                 source = source.splitlines()
         if source is None:
-            try:
+            with suppress(OSError, IOError):
                 with open(filename, 'rb') as fp:
                     source = fp.read().splitlines()
-            except (OSError, IOError):
-                pass
         if source is None:
             return None, [], None, []
 
         # If we just read the source from a file, or if the loader did not
         # apply tokenize.detect_encoding to decode the source into a Unicode
         # string, then we should do that ourselves.
-        if isinstance(source[0], six.binary_type):
+        if isinstance(source[0], bytes):
             encoding = 'ascii'
             for line in source[:2]:
                 # File coding may be specified. Match pattern from PEP-263
@@ -134,7 +125,7 @@ class ExceptionReporter(object):
                 if match:
                     encoding = match.group(1).decode('ascii')
                     break
-            source = [six.text_type(sline, encoding, 'replace') for sline in source]
+            source = [str(sline, encoding, 'replace') for sline in source]
 
         lower_bound = max(0, lineno - context_lines)
         upper_bound = lineno + context_lines
@@ -211,7 +202,7 @@ class ExceptionReporter(object):
             else:
                 tb = tb.tb_next
 
-            if tb is None and not added_full_tb:
+            if self.get_full_tb and tb is None and not added_full_tb:
                 exc_value = Exception('Full Stack Trace')
                 exc_value.is_full_stack_trace = True
                 exc_value.__cause__ = Exception('Full Stack Trace')
@@ -219,19 +210,3 @@ class ExceptionReporter(object):
                 added_full_tb = True
 
         return frames
-
-    def exception_filename(self):
-        import uuid
-        return str(uuid.uuid4().hex) + str(uuid.uuid4().hex)
-
-    def format_exception(self):
-        """
-        Return the same data as from traceback.format_exception.
-        """
-        import traceback
-        frames = self.get_traceback_frames()
-        tb = [(f['filename'], f['lineno'], f['function'], f['context_line']) for f in frames]
-        list = ['Traceback (most recent call last):\n']
-        list += traceback.format_list(tb)
-        list += traceback.format_exception_only(self.exc_type, self.exc_value)
-        return list

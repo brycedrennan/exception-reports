@@ -5,13 +5,16 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-import six
 import tinys3
-
 from exception_reports.reporter import ExceptionReporter, render_exception_report
 from exception_reports.traceback import get_logger_traceback
 
 logger = logging.getLogger(__name__)
+
+
+class ExceptionReportConfigurationError(Exception):
+    """For misconfigurations of the exception_reports library"""
+    pass
 
 
 def uncaught_exception_handler(exc_type, exc_value, exc_traceback):
@@ -27,7 +30,6 @@ class AddExceptionDataFilter(logging.Filter):
     """A filter which makes sure debug info has been uploaded to S3 for ERROR or higher logs."""
 
     def filter(self, record):
-        __traceback_hide__ = True
         if record.levelno >= logging.ERROR:
             if not getattr(record, 'data', None):
                 record.data = {}
@@ -36,7 +38,6 @@ class AddExceptionDataFilter(logging.Filter):
                 record.data['exception_data'] = ExceptionReporter(*exc_info).get_traceback_data()
             except Exception as e:
                 logger.warning("Error getting traceback data" + repr(e))
-                raise
 
         return True
 
@@ -57,7 +58,10 @@ class _AddExceptionReportFilter(AddExceptionDataFilter):
         return True
 
     def output_report(self, filename, data):
-        filepath = os.path.abspath(self.output_path + filename)
+        output_path = str(self.output_path)
+        if not output_path[-1] == '/':
+            output_path += '/'
+        filepath = os.path.abspath(output_path + filename)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         if isinstance(data, str):
             data = data.encode('utf8')
@@ -99,6 +103,9 @@ class _AddS3ExceptionReportFilter(_AddExceptionReportFilter):
 
 
 def AddS3ExceptionReportFilter(s3_access_key, s3_secret_key, s3_bucket, s3_prefix=''):
+    if not (s3_access_key and s3_secret_key and s3_bucket):
+        raise ExceptionReportConfigurationError("You must specify valid S3 connection settings")
+
     class GeneratedFilter(_AddS3ExceptionReportFilter):
         access_key = s3_access_key
         secret_key = s3_secret_key
@@ -123,7 +130,7 @@ class ExtraDataLogFormatter(logging.Formatter):
         if data:
             try:
                 record.data_as_kv = ' '.join(
-                    [u'{}="{}"'.format(k, v.strip() if isinstance(v, six.string_types) else v)
+                    [u'{}="{}"'.format(k, v.strip() if isinstance(v, str) else v)
                      for k, v in sorted(data.items()) if v is not None])
             except AttributeError:
                 # Output something, even if 'data' wasn't a dictionary.

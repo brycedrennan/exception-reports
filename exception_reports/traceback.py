@@ -10,7 +10,6 @@ def get_logger_traceback():
     lower than the logging call.
 
     """
-    __traceback_hide__ = True
     try:
         raise ZeroDivisionError
     except ZeroDivisionError:
@@ -44,13 +43,20 @@ class TracebackFrameProxy(object):
 
     def organize_tb_frames(self):
         f = self.tb.tb_frame
+        first_f = f
+        found_log_call = False
 
         while f:
             if f.f_code.co_name == '_log' and 'logging' in f.f_code.co_filename:
                 if 'makeRecord' in f.f_code.co_names:
                     f = f.f_back.f_back
+                    found_log_call = True
                     break
             f = f.f_back
+
+        # return entire stack if it can't find the right place to censor
+        if not found_log_call:
+            f = first_f
 
         frames = []
         while f:
