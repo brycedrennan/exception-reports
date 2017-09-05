@@ -144,8 +144,9 @@ raise Exception("YOLO!!!!")
 
 ## Updating package on pypi
 
-    git tag 0.1
+    git tag 0.1.3
     git push --tags
     python setup.py bdist_wheel
+    python setup.py sdist
     twine upload dist/* -u username
     
