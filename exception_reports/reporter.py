@@ -1,15 +1,17 @@
-import datetime
+import json
 import logging
 import re
 import sys
+import types
 from contextlib import suppress
+from datetime import datetime, date, timezone
 from html import escape
 from pathlib import Path
 from pprint import pformat
 
 import jinja2
 
-from exception_reports.traceback import get_logger_traceback
+from exception_reports.traceback import get_logger_traceback, TracebackFrameProxy
 from exception_reports.utils import force_text
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,20 @@ def render_exception_report(exception_data):
     return jinja_env.from_string(TECHNICAL_500_TEMPLATE).render(exception_data)
 
 
+def render_exception_json(exception_data):
+    return json.dumps(exception_data, default=_json_serializer)
+
+
+def _json_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, (types.TracebackType, TracebackFrameProxy)):
+        return '<Traceback object>'
+
+    return repr(obj)
+
+
 class ExceptionReporter(object):
     """
     A class to organize and coordinate reporting on exceptions.
@@ -42,7 +58,7 @@ class ExceptionReporter(object):
         self.tb = tb
         self.get_full_tb = get_full_tb
         self.max_var_length = max_var_length
-        self.head_var_length = int(max_var_length /2)
+        self.head_var_length = int(max_var_length / 2)
         self.tail_var_length = max_var_length - self.head_var_length
 
         if not tb:
@@ -88,7 +104,7 @@ class ExceptionReporter(object):
             'frames': frames,
             'sys_executable': sys.executable,
             'sys_version_info': '%d.%d.%d' % sys.version_info[0:3],
-            'server_time': datetime.datetime.now(datetime.timezone.utc),
+            'server_time': datetime.now(timezone.utc),
             'sys_path': sys.path,
         }
         # Check whether exception info is available
@@ -98,6 +114,7 @@ class ExceptionReporter(object):
             c['exception_value'] = force_text(self.exc_value, errors='replace')
         if frames:
             c['lastframe'] = frames[-1]
+
         return c
 
     def _get_lines_from_file(self, filename, lineno, context_lines, loader=None, module_name=None):

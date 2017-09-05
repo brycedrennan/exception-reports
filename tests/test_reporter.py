@@ -1,4 +1,4 @@
-from exception_reports.reporter import ExceptionReporter, render_exception_report
+from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
 
 
 def test_exception_report_data():
@@ -86,3 +86,11 @@ def test_rendering_unicode_error():
     #
     # with open('report.html', 'w') as f:
     #     f.write(render_exception_report(exception_data))
+
+
+def test_exception_data_json():
+    try:
+        raise Exception('on purpose')
+    except Exception as e:
+        exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
+    render_exception_json(exception_data)

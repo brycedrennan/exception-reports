@@ -6,6 +6,7 @@ from logging.config import dictConfig
 
 import pytest
 import responses
+
 from exception_reports.logs import AddS3ExceptionReportFilter, AddExceptionReportFilter, async_exception_handler, DEFAULT_LOGGING_CONFIG, ExceptionReportConfigurationError, \
     AddExceptionDataFilter
 
@@ -65,6 +66,23 @@ def test_error_handler_reports(tmpdir):
     logger.error('this is a problem')
 
     assert len(tmpdir.listdir()) == 1
+
+
+def test_error_handler_json(tmpdir):
+    logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
+
+    logging_config['filters']['add_exception_report'] = {
+        '()': AddExceptionReportFilter(output_path=tmpdir, output_json=True),
+    }
+    dictConfig(logging_config)
+
+    logger = logging.getLogger(__name__)
+
+    assert not tmpdir.listdir()
+
+    logger.error('this is a problem')
+
+    assert len(tmpdir.listdir()) == 2
 
 
 def test_error_handler_reports_multiple_exceptions(tmpdir):

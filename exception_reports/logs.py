@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 import tinys3
-from exception_reports.reporter import ExceptionReporter, render_exception_report
+from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
 from exception_reports.traceback import get_logger_traceback
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ class AddExceptionDataFilter(logging.Filter):
 class _AddExceptionReportFilter(AddExceptionDataFilter):
     output_path = '/tmp/python-error-reports/'
     output_html = True
+    output_json = False
 
     def filter(self, record):
         super().filter(record)
@@ -55,6 +56,11 @@ class _AddExceptionReportFilter(AddExceptionDataFilter):
             if self.output_html:
                 html = render_exception_report(exception_data)
                 record.data['error_report'] = self.output_report(filename + '.htm', html)
+
+            if self.output_json:
+                json_str = render_exception_json(exception_data)
+                record.data['error_report_json'] = self.output_report(filename + '.json', json_str)
+
         return True
 
     def output_report(self, filename, data):
@@ -72,13 +78,15 @@ class _AddExceptionReportFilter(AddExceptionDataFilter):
         return filepath
 
 
-def AddExceptionReportFilter(output_path='/tmp/python-error-reports/', output_html=True):
+def AddExceptionReportFilter(output_path='/tmp/python-error-reports/', output_html=True, output_json=False):
     _output_path = output_path
     _output_html = output_html
+    _output_json = output_json
 
     class GeneratedFilter(_AddExceptionReportFilter):
         output_path = _output_path
         output_html = _output_html
+        output_json = _output_json
 
     return GeneratedFilter
 
