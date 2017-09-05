@@ -32,13 +32,18 @@ def render_exception_report(exception_data):
 class ExceptionReporter(object):
     """
     A class to organize and coordinate reporting on exceptions.
+
+    max_var_length: how long a variable's output can be before it's truncated
     """
 
-    def __init__(self, exc_type=None, exc_value=None, tb=None, get_full_tb=True):
+    def __init__(self, exc_type=None, exc_value=None, tb=None, get_full_tb=True, max_var_length=4096 + 2048):
         self.exc_type = exc_type
         self.exc_value = exc_value
         self.tb = tb
         self.get_full_tb = get_full_tb
+        self.max_var_length = max_var_length
+        self.head_var_length = int(max_var_length /2)
+        self.tail_var_length = max_var_length - self.head_var_length
 
         if not tb:
             self.exc_type, self.exc_value, self.tb = sys.exc_info()
@@ -62,8 +67,8 @@ class ExceptionReporter(object):
                     if isinstance(v, bytes):
                         v = v.decode('utf-8', 'replace')  # don't choke on non-utf-8 input
                     # Trim large blobs of data
-                    if len(v) > 4096:
-                        v = '%s... <trimmed %d bytes string>' % (v[0:4096], len(v))
+                    if len(v) > self.max_var_length:
+                        v = f'{v[0:self.head_var_length]}... \n\n<trimmed {len(v)} bytes string>\n\n ...{v[-self.tail_var_length:]}'
                     frame_vars.append((k, escape(v)))
                 frame['vars'] = frame_vars
             frames[i] = frame

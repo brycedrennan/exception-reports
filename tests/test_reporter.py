@@ -61,7 +61,7 @@ def test_rendering_exception_during_exception():
 
 
 def test_rendering_long_string():
-    big_str = b'a' * 5000  # noqa
+    big_str = b'a' * 10000  # noqa
     big_num = 2342342342349835  # noqa
 
     try:
