@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 import tinys3
+
 from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
 from exception_reports.traceback import get_logger_traceback
 
@@ -31,11 +32,11 @@ class AddExceptionDataFilter(logging.Filter):
 
     def filter(self, record):
         if record.levelno >= logging.ERROR:
-            if not getattr(record, 'data', None):
-                record.data = {}
+            if not getattr(record, '_exception_data', None):
+                record._exception_data = None
             exc_info = record.exc_info or (None, record.getMessage(), get_logger_traceback())
             try:
-                record.data['exception_data'] = ExceptionReporter(*exc_info).get_traceback_data()
+                record._exception_data = ExceptionReporter(*exc_info).get_traceback_data()
             except Exception as e:
                 logger.warning("Error getting traceback data" + repr(e))
 
@@ -49,7 +50,11 @@ class _AddExceptionReportFilter(AddExceptionDataFilter):
 
     def filter(self, record):
         super().filter(record)
-        exception_data = getattr(record, 'data', {}).get('exception_data')
+        exception_data = getattr(record, '_exception_data', None)
+
+        if not getattr(record, 'data', None):
+            setattr(record, 'data', {})
+
         if exception_data:
             filename = f'{datetime.now(timezone.utc)}_{uuid.uuid4().hex}'.replace(' ', '_')
 
@@ -158,6 +163,10 @@ DEFAULT_LOGGING_CONFIG = {
             '()': ExtraDataLogFormatter,
             'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
         },
+        # 'json': {
+        #     '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+        #     'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
+        # }
     },
     'filters': {
         'add_exception_report': {
