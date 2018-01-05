@@ -22,9 +22,7 @@ class LocalErrorStorage(ErrorStorage):
 
     def write(self, filename, data):
         output_path = str(self.output_path)
-        if not output_path[-1] == '/':
-            output_path += '/'
-        filepath = os.path.abspath(output_path + self.prefix + filename)
+        filepath = os.path.abspath(os.path.join(output_path, self.prefix + filename))
 
         # make directory if it doesn't exist
         os.makedirs(os.path.dirname(filepath), exist_ok=True)

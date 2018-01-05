@@ -1,15 +1,16 @@
-from exception_reports.storages import LocalErrorStorage# Exception Reports
+# Exception Reports
 
-Generate an interactive stack trace that includes variable values at each level.
+Generate an interactive stack trace that includes variable state at each level.
 
 ## Features
 
- - Get all the context you need to understand what caused an exception
- - Get full stack traces for logger.error calls (not just for exceptions)
- - Exception reports can output to either the local filesystem or S3
+ - Get the variable state you need to understand what caused an exception
  - Normal python tracebacks only show the stack up to where an exception was caught, 
    this library shows the entire traceback.
+ - Get full stack traces for logger.error calls (not just for exceptions)
+ - Exception reports can output to either the local filesystem or S3
  - Shows beginning and end of large values (django's report only shows beginning)
+ - Decorator available for debugging or cases where you don't control logging.
 
 ## Installation
 
@@ -147,7 +148,10 @@ sys.excepthook = uncaught_exception_handler
 raise Exception("YOLO!!!!")
 ```
 
-Decorators
+### Decorators
+
+Useful to do some quick debugging, only get reports for specific exceptions, or when you don't control the
+logging config.  Can be used to provide debugging information in UDFs in PySpark. 
 ```python
 from exception_reports.decorators import exception_report
 from exception_reports.storages import S3ErrorStorage
