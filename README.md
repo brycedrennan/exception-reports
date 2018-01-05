@@ -1,4 +1,4 @@
-# Exception Reports
+from exception_reports.storages import LocalErrorStorage# Exception Reports
 
 Generate an interactive stack trace that includes variable values at each level.
 
@@ -44,6 +44,7 @@ import sys
 from logging.config import dictConfig
 
 from exception_reports.logs import uncaught_exception_handler, ExtraDataLogFormatter, AddExceptionReportFilter
+from exception_reports.storages import LocalErrorStorage
 
 LOGGING_CONFIG = {
     'version': 1,
@@ -56,7 +57,8 @@ LOGGING_CONFIG = {
     },
     'filters': {
         'add_exception_report': {
-            '()': AddExceptionReportFilter(output_path='/myproject/bug-reports/'),
+            '()': AddExceptionReportFilter,
+            'storage_backend': LocalErrorStorage(output_path='/myproject/bug-reports/')
         },
     },
     'handlers': {
@@ -94,7 +96,8 @@ import logging
 import sys
 from logging.config import dictConfig
 
-from exception_reports.logs import uncaught_exception_handler, ExtraDataLogFormatter, AddS3ExceptionReportFilter
+from exception_reports.logs import uncaught_exception_handler, ExtraDataLogFormatter, AddExceptionReportFilter
+from exception_reports.storages import S3ErrorStorage
 
 LOGGING_CONFIG = {
     'version': 1,
@@ -107,10 +110,12 @@ LOGGING_CONFIG = {
     },
     'filters': {
         'add_exception_report': {
-            '()': AddS3ExceptionReportFilter(
-                s3_access_key='MY_ACCESS_KEY', 
-                s3_secret_key='MY_SECRET_KEY', 
-                s3_bucket='MY_BUCKET'
+            '()': AddExceptionReportFilter,
+            'storage_backend': S3ErrorStorage(
+                access_key='MY_ACCESS_KEY', 
+                secret_key='MY_SECRET_KEY', 
+                bucket='MY_BUCKET',
+                prefix='bugs'
             ),
         },
     },
@@ -140,6 +145,46 @@ logger = logging.getLogger(__name__)
 sys.excepthook = uncaught_exception_handler
 
 raise Exception("YOLO!!!!")
+```
+
+Decorators
+```python
+from exception_reports.decorators import exception_report
+from exception_reports.storages import S3ErrorStorage
+
+# defaults to local file storage
+@exception_report()
+def foobar(text):
+    raise Exception("bad things!!")
+
+
+# s3 storage
+storage_backend = S3ErrorStorage(
+    access_key='access_key',
+    secret_key='secret_key',
+    bucket='my_bucket',
+    prefix='all-exceptions/'
+)
+
+@exception_report(storage_backend=storage_backend)
+def foobar(text):
+    raise Exception("bad things!!")
+
+
+# custom decorator
+def my_exception_report(f):
+    storage_backend = S3ErrorStorage(
+        access_key='access_key',
+        secret_key='secret_key',
+        bucket='my_bucket',
+        prefix='all-exceptions/'
+    )
+
+    return exception_report(storage_backend=storage_backend)(f)
+
+@my_exception_report
+def foobar(text):
+    raise Exception("bad things!!")
 ```
 
 ## Updating package on pypi

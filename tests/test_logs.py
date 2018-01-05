@@ -7,35 +7,23 @@ from logging.config import dictConfig
 import pytest
 import responses
 
-from exception_reports.logs import AddS3ExceptionReportFilter, AddExceptionReportFilter, async_exception_handler, DEFAULT_LOGGING_CONFIG, ExceptionReportConfigurationError, \
-    AddExceptionDataFilter
+from exception_reports.logs import async_exception_handler, DEFAULT_LOGGING_CONFIG
+from exception_reports.storages import LocalErrorStorage, S3ErrorStorage
 
 
 class SpecialException(Exception):
     pass
 
 
-def test_s3_filter_requires_setup():
-    with pytest.raises(ExceptionReportConfigurationError):
-        AddS3ExceptionReportFilter(
-            s3_access_key='',
-            s3_secret_key='',
-            s3_bucket='',
-            s3_prefix='all-exceptions/'
-        )
-
-
 @responses.activate
 def test_s3_error_handler():
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
-    logging_config['filters']['add_exception_report'] = {
-        '()': AddS3ExceptionReportFilter(
-            s3_access_key='access_key',
-            s3_secret_key='secret_key',
-            s3_bucket='my_bucket',
-            s3_prefix='all-exceptions/'
-        ),
-    }
+    logging_config['filters']['add_exception_report']['storage_backend'] = S3ErrorStorage(
+        access_key='access_key',
+        secret_key='secret_key',
+        bucket='my_bucket',
+        prefix='all-exceptions/'
+    )
 
     dictConfig(logging_config)
 
@@ -51,12 +39,25 @@ def test_s3_error_handler():
     assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
 
 
+def test_error_handler_reports_z(tmpdir):
+    logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
+
+    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
+    dictConfig(logging_config)
+
+    logger = logging.getLogger(__name__)
+
+    assert not tmpdir.listdir()
+
+    logger.error('this is a problem')
+
+    assert len(tmpdir.listdir()) == 1
+
+
 def test_error_handler_reports(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-    logging_config['filters']['add_exception_report'] = {
-        '()': AddExceptionReportFilter(output_path=tmpdir),
-    }
+    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -71,9 +72,8 @@ def test_error_handler_reports(tmpdir):
 def test_error_handler_json(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-    logging_config['filters']['add_exception_report'] = {
-        '()': AddExceptionReportFilter(output_path=tmpdir, output_json=True),
-    }
+    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
+    logging_config['filters']['add_exception_report']['output_json'] = True
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -87,9 +87,7 @@ def test_error_handler_json(tmpdir):
 
 def test_error_handler_reports_multiple_exceptions(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
-    logging_config['filters']['add_exception_report'] = {
-        '()': AddExceptionReportFilter(output_path=tmpdir),
-    }
+    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -123,9 +121,6 @@ async def test_async_handler(event_loop):
 
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-    logging_config['filters']['add_exception_report'] = {
-        '()': AddExceptionDataFilter,
-    }
     dictConfig(logging_config)
 
     event_loop.set_exception_handler(async_exception_handler)

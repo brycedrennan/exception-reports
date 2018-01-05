@@ -1,7 +1,7 @@
 import sys
 
 
-def get_logger_traceback():
+def get_logger_traceback():  # noqa
     """
     Returns a traceback object for a log event.
 
@@ -40,6 +40,7 @@ class TracebackFrameProxy(object):
     def tb_next(self):
         if self.frames_level < len(self.frames_from_top) - 1:
             return TracebackFrameProxy(self.tb, frames_level=self.frames_level + 1)
+        return None
 
     def organize_tb_frames(self):
         f = self.tb.tb_frame
