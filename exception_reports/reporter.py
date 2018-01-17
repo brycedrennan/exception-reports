@@ -26,7 +26,7 @@ with open(_CURRENT_DIR / 'report_template.html', 'r') as f:
 
 
 def render_exception_report(exception_data):
-    jinja_env = jinja2.Environment(loader=jinja2.BaseLoader())
+    jinja_env = jinja2.Environment(loader=jinja2.BaseLoader(), extensions=['jinja2.ext.autoescape'])
     exception_data['repr'] = repr
     return jinja_env.from_string(TECHNICAL_500_TEMPLATE).render(exception_data)
 

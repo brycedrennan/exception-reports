@@ -1,21 +1,12 @@
-import io
 import logging
-import os.path
 import time
-import uuid
-from datetime import datetime, timezone
-
-import tinys3
 
 from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
+from exception_reports.storages import LocalErrorStorage
 from exception_reports.traceback import get_logger_traceback
+from exception_reports.utils import gen_error_filename
 
 logger = logging.getLogger(__name__)
-
-
-class ExceptionReportConfigurationError(Exception):
-    """For misconfigurations of the exception_reports library"""
-    pass
 
 
 def uncaught_exception_handler(exc_type, exc_value, exc_traceback):
@@ -27,10 +18,18 @@ def async_exception_handler(loop, context):
     loop.stop()
 
 
-class AddExceptionDataFilter(logging.Filter):
-    """A filter which makes sure debug info has been uploaded to S3 for ERROR or higher logs."""
+class AddExceptionReportFilter(logging.Filter):
+    def __init__(self, storage_backend=LocalErrorStorage(), output_html=True, output_json=False):
+        super().__init__()
+        self.storage_backend = storage_backend
+        self.output_html = output_html
+        self.output_json = output_json
+        self.enabled = output_json or output_html
 
     def filter(self, record):
+        if not self.enabled:
+            return True
+
         if record.levelno >= logging.ERROR:
             if not getattr(record, '_exception_data', None):
                 record._exception_data = None
@@ -38,94 +37,23 @@ class AddExceptionDataFilter(logging.Filter):
             try:
                 record._exception_data = ExceptionReporter(*exc_info).get_traceback_data()
             except Exception as e:
-                logger.warning("Error getting traceback data" + repr(e))
+                logger.warning(f"Error getting traceback data {repr(e)}")
+
+            if not getattr(record, 'data', None):
+                setattr(record, 'data', {})
+
+            if record._exception_data:
+                if self.output_html:
+                    html = render_exception_report(record._exception_data)
+                    filename = gen_error_filename(extension='html')
+                    record.data['error_report'] = self.storage_backend.write(filename, html)
+
+                if self.output_json:
+                    json_str = render_exception_json(record._exception_data)
+                    filename = gen_error_filename(extension='json')
+                    record.data['error_report_json'] = self.storage_backend.write(filename, json_str)
 
         return True
-
-
-class _AddExceptionReportFilter(AddExceptionDataFilter):
-    output_path = '/tmp/python-error-reports/'
-    output_html = True
-    output_json = False
-
-    def filter(self, record):
-        super().filter(record)
-        exception_data = getattr(record, '_exception_data', None)
-
-        if not getattr(record, 'data', None):
-            setattr(record, 'data', {})
-
-        if exception_data:
-            filename = f'{datetime.now(timezone.utc)}_{uuid.uuid4().hex}'.replace(' ', '_')
-
-            if self.output_html:
-                html = render_exception_report(exception_data)
-                record.data['error_report'] = self.output_report(filename + '.htm', html)
-
-            if self.output_json:
-                json_str = render_exception_json(exception_data)
-                record.data['error_report_json'] = self.output_report(filename + '.json', json_str)
-
-        return True
-
-    def output_report(self, filename, data):
-        output_path = str(self.output_path)
-        if not output_path[-1] == '/':
-            output_path += '/'
-        filepath = os.path.abspath(output_path + filename)
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        if isinstance(data, str):
-            data = data.encode('utf8')
-
-        with open(filepath, 'wb') as f:
-            f.write(data)
-
-        return filepath
-
-
-def AddExceptionReportFilter(output_path='/tmp/python-error-reports/', output_html=True, output_json=False):
-    _output_path = output_path
-    _output_html = output_html
-    _output_json = output_json
-
-    class GeneratedFilter(_AddExceptionReportFilter):
-        output_path = _output_path
-        output_html = _output_html
-        output_json = _output_json
-
-    return GeneratedFilter
-
-
-class _AddS3ExceptionReportFilter(_AddExceptionReportFilter):
-    access_key = None
-    secret_key = None
-    bucket = None
-    prefix = None
-
-    def output_report(self, key, data):
-        try:
-            if isinstance(data, str):
-                data = data.encode('utf8')
-            text_stream = io.BytesIO(data)
-            conn = tinys3.Connection(self.access_key, self.secret_key, tls=True)
-
-            response = conn.upload(f'{self.prefix}{key}', text_stream, self.bucket)
-            return response.url
-        except Exception:
-            logger.warning('Error saving exception to s3', exc_info=True)
-
-
-def AddS3ExceptionReportFilter(s3_access_key, s3_secret_key, s3_bucket, s3_prefix=''):
-    if not (s3_access_key and s3_secret_key and s3_bucket):
-        raise ExceptionReportConfigurationError("You must specify valid S3 connection settings")
-
-    class GeneratedFilter(_AddS3ExceptionReportFilter):
-        access_key = s3_access_key
-        secret_key = s3_secret_key
-        bucket = s3_bucket
-        prefix = s3_prefix
-
-    return GeneratedFilter
 
 
 class ExtraDataLogFormatter(logging.Formatter):
@@ -170,7 +98,7 @@ DEFAULT_LOGGING_CONFIG = {
     },
     'filters': {
         'add_exception_report': {
-            '()': AddExceptionReportFilter(),
+            '()': AddExceptionReportFilter,
         },
     },
     'handlers': {
