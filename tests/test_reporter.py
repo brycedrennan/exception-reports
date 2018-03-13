@@ -1,4 +1,5 @@
 from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
+from exception_reports.storages import LocalErrorStorage
 
 
 def test_exception_report_data():
@@ -74,7 +75,7 @@ def test_rendering_long_string():
     assert '&lt;trimmed' in local_vars['big_str']
 
 
-def test_rendering_unicode_error():
+def test_rendering_unicode_error(tmpdir):
     some_bytes = b'asdfljsadf\x23\x93\x01'
     try:
         some_bytes.decode('utf8')
@@ -83,9 +84,21 @@ def test_rendering_unicode_error():
 
     html = render_exception_report(exception_data)
     assert 'string that could not be encoded' in html
-    #
-    # with open('report.html', 'w') as f:
-    #     f.write(render_exception_report(exception_data))
+    storage_backend = LocalErrorStorage(output_path=str(tmpdir))
+    storage_backend.write('bug_report.html', html)
+
+
+def test_saving_unicode_error(tmpdir):
+    bad_url = 'http://badwebsite.circleup.com/in\udcaedex.html'
+    try:
+        bad_url.encode('utf8')
+    except UnicodeEncodeError:
+        exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
+
+    html = render_exception_report(exception_data)
+    assert 'string that could not be encoded' in html
+    storage_backend = LocalErrorStorage(output_path=str(tmpdir))
+    storage_backend.write('bug_report.html', html)
 
 
 def test_exception_data_json():
