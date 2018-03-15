@@ -99,6 +99,10 @@ class ExceptionReporter(object):
                     unicode_str[max(start - 5, 0):min(end + 5, len(unicode_str))],
                     'ascii', errors='replace'
                 )
+                try:
+                    unicode_hint.encode('utf8')
+                except UnicodeEncodeError:
+                    unicode_hint = unicode_hint.encode('utf8', 'surrogateescape')
         c = {
             'unicode_hint': unicode_hint,
             'frames': frames,
