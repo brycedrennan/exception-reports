@@ -12,4 +12,7 @@ logger = logging.getLogger(__name__)
 # configure uncaught exceptions to be logged
 sys.excepthook = uncaught_exception_handler
 
-raise Exception("YOLO!!!!")
+try:
+    raise Exception("<strong>YOLO!!!!</strong>")
+except Exception:
+    raise Exception('<strong>HELLO</strong>')
