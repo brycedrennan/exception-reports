@@ -28,7 +28,7 @@ class LocalErrorStorage(ErrorStorage):
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         if isinstance(data, str):
-            data = data.encode('utf8')
+            data = data.encode('utf8', 'surrogateescape')
 
         with open(filepath, 'wb') as f:
             f.write(data)
