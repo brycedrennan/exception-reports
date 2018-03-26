@@ -193,7 +193,7 @@ def foobar(text):
 
 ## Updating package on pypi
 
-    git tag 0.1.3
+    git tag 0.3.0
     git push --tags
     python setup.py bdist_wheel
     python setup.py sdist
@@ -202,6 +202,6 @@ def foobar(text):
 
 ## Changelog
 
-#### Pending
+#### 0.3.0
  - Can now handle exceptions that require special init args.  Uses a modified class instead of creating a new exception instance. Thanks to @munro for noticing 
  the issue and finding the right solution.
