@@ -41,10 +41,20 @@ def exception_report(storage_backend=LocalErrorStorage()):
             filename = gen_error_filename(extension='html')
             report_location = storage_backend.write(filename, data)
             setattr(e, 'report', report_location)
+
+            ExceptionType = type(e)
+
+            def my_str(self):
+                m = ExceptionType.__str__(self)
+                return f'{m} [report:{report_location}]'
+
+            NewExceptionType = type(ExceptionType.__name__, (ExceptionType,), {'__str__': my_str})
+            e.__class__ = NewExceptionType
+
             # We want to raise the original exception:
             #    1) with a modified message containing the report location
             #    2) with the original traceback
             #    3) without it showing an extra chained exceptino because of this handling  (`from None` accomplishes this)
-            raise type(e)(f'{str(e)} [report:{report_location}]').with_traceback(reporter.tb) from None
+            raise e from None
 
     return decorator(_exception_reports)

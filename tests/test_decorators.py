@@ -21,6 +21,23 @@ def test_decorator():
     assert 'report:/tmp' in str(e)
 
 
+class SpecialArgsException(Exception):
+
+    def __init__(self, message, important_var):
+        super().__init__(message)
+
+
+def test_decorator_with_args_exception():
+    @exception_report()
+    def foobar(text):
+        raise SpecialArgsException("bad things!!", 34)
+
+    with pytest.raises(SpecialArgsException) as e:
+        foobar('hi')
+
+    assert 'report:/tmp' in str(e)
+
+
 @responses.activate
 def test_s3_decorator():
     storage_backend = S3ErrorStorage(
@@ -64,8 +81,30 @@ def test_custom_s3_decorator():
         raise SpecialException("bad things!!")
 
     with pytest.raises(SpecialException) as e:
-        foobar('hi')
+        try:
+            foobar('hi')
+        except Exception as e2:
+            assert_expection_spec(e2)
+            raise
 
     assert 'report:https://' in str(e)
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
+
+
+def test_exception_spec():
+    with pytest.raises(SpecialException):
+        try:
+            raise SpecialException("bad things!!")
+        except Exception as e:
+            # validate Python object API still works on patched object & patched class
+            assert_expection_spec(e)
+            raise
+
+
+def assert_expection_spec(e):
+    # validate Python object API still works on patched object & patched class
+    assert e.__class__.__name__ == 'SpecialException'
+    assert isinstance(e, SpecialException)
+    assert issubclass(e.__class__, Exception)
+    assert issubclass(e.__class__, SpecialException)
