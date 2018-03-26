@@ -21,6 +21,23 @@ def test_decorator():
     assert 'report:/tmp' in str(e)
 
 
+class SpecialArgsException(Exception):
+
+    def __init__(self, message, important_var):
+        super().__init__(message)
+
+
+def test_decorator_with_args_exception():
+    @exception_report()
+    def foobar(text):
+        raise SpecialArgsException("bad things!!", 34)
+
+    with pytest.raises(SpecialArgsException) as e:
+        foobar('hi')
+
+    assert 'report:/tmp' in str(e)
+
+
 @responses.activate
 def test_s3_decorator():
     storage_backend = S3ErrorStorage(

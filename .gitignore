@@ -3,7 +3,7 @@
 .direnv
 .cache
 *.egg-info
-__pycache___
+__pycache__
 dist/
 build/
 .tox

@@ -12,7 +12,14 @@ logger = logging.getLogger(__name__)
 # configure uncaught exceptions to be logged
 sys.excepthook = uncaught_exception_handler
 
+
+class SpecialArgsException(Exception):
+
+    def __init__(self, message, important_var):
+        super().__init__(message)
+
+
 try:
-    raise Exception("<strong>YOLO!!!!</strong>")
+    raise SpecialArgsException("<strong>YOLO!!!!</strong>", 24)
 except Exception:
-    raise Exception('<strong>HELLO</strong>')
+    raise SpecialArgsException('<strong>HELLO</strong>', 34)

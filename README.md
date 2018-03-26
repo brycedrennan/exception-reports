@@ -199,3 +199,9 @@ def foobar(text):
     python setup.py sdist
     twine upload dist/* -u username
     
+
+## Changelog
+
+#### Pending
+ - Can now handle exceptions that require special init args.  Uses a modified class instead of creating a new exception instance. Thanks to @munro for noticing 
+ the issue and finding the right solution.
