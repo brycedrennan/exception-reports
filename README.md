@@ -202,6 +202,9 @@ def foobar(text):
 
 ## Changelog
 
+#### 0.3.1
+ - If an error happens while loading the source context it's now gracefully handled instead of stopping the report from being generated
+
 #### 0.3.0
  - Can now handle exceptions that require special init args.  Uses a modified class instead of creating a new exception instance. Thanks to @munro for noticing 
  the issue and finding the right solution.
