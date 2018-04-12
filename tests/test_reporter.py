@@ -1,3 +1,4 @@
+import os
 from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
 from exception_reports.storages import LocalErrorStorage
 
@@ -107,3 +108,10 @@ def test_exception_data_json():
     except Exception as e:
         exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
     render_exception_json(exception_data)
+
+
+def test_bad_sourcefile():
+    reporter = ExceptionReporter()
+    empty_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), '__init__.py')
+    lower_bound, pre_context, context_line, post_context = reporter._get_lines_from_file(empty_file, 999, 4)
+    assert 'There was an error displaying the source' in context_line
