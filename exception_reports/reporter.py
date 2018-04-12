@@ -138,29 +138,35 @@ class ExceptionReporter(object):
                     source = fp.read().splitlines()
         if source is None:
             return None, [], None, []
+        try:
+            # If we just read the source from a file, or if the loader did not
+            # apply tokenize.detect_encoding to decode the source into a Unicode
+            # string, then we should do that ourselves.
+            if isinstance(source[0], bytes):
+                encoding = 'ascii'
+                for line in source[:2]:
+                    # File coding may be specified. Match pattern from PEP-263
+                    # (http://www.python.org/dev/peps/pep-0263/)
+                    match = re.search(br'coding[:=]\s*([-\w.]+)', line)
+                    if match:
+                        encoding = match.group(1).decode('ascii')
+                        break
+                source = [str(sline, encoding, 'replace') for sline in source]
 
-        # If we just read the source from a file, or if the loader did not
-        # apply tokenize.detect_encoding to decode the source into a Unicode
-        # string, then we should do that ourselves.
-        if isinstance(source[0], bytes):
-            encoding = 'ascii'
-            for line in source[:2]:
-                # File coding may be specified. Match pattern from PEP-263
-                # (http://www.python.org/dev/peps/pep-0263/)
-                match = re.search(br'coding[:=]\s*([-\w.]+)', line)
-                if match:
-                    encoding = match.group(1).decode('ascii')
-                    break
-            source = [str(sline, encoding, 'replace') for sline in source]
+            lower_bound = max(0, lineno - context_lines)
+            upper_bound = lineno + context_lines
 
-        lower_bound = max(0, lineno - context_lines)
-        upper_bound = lineno + context_lines
+            pre_context = source[lower_bound:lineno]
+            context_line = source[lineno]
+            post_context = source[lineno + 1:upper_bound]
 
-        pre_context = source[lower_bound:lineno]
-        context_line = source[lineno]
-        post_context = source[lineno + 1:upper_bound]
-
-        return lower_bound, pre_context, context_line, post_context
+            return lower_bound, pre_context, context_line, post_context
+        except Exception as e:
+            try:
+                context_line = f'<There was an error displaying the source file: "{repr(e)}"  The loaded source has {len(source)} lines.>'
+            except Exception:
+                context_line = '<There was an error displaying the source file. Further, there was an error displaying that error>'
+            return lineno, [], context_line, []
 
     def get_traceback_frames(self):
         def explicit_or_implicit_cause(exc_value):
