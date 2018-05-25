@@ -21,6 +21,20 @@ def test_decorator():
     assert 'report:/tmp' in str(e)
 
 
+def test_decorator_with_base_exception():
+    """Ensure that the library handles non-subclassed exceptions"""
+    @exception_report()
+    def foobar(text):
+        raise Exception("bad things!!")
+
+    try:
+        foobar('hi')
+    except Exception as e:
+        if 'bad things' not in repr(e):
+            raise
+        assert 'report:/tmp' in str(e)
+
+
 class SpecialArgsException(Exception):
 
     def __init__(self, message, important_var):
