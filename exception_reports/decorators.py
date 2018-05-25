@@ -56,7 +56,6 @@ def exception_report(storage_backend=LocalErrorStorage()):
 
                 e.__class__ = NewExceptionType
 
-
             # We want to raise the original exception:
             #    1) with a modified message containing the report location
             #    2) with the original traceback
