@@ -1,11 +1,11 @@
 from decorator import decorator
 
-from exception_reports.reporter import ExceptionReporter, render_exception_report
+from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
 from exception_reports.storages import LocalErrorStorage
 from exception_reports.utils import gen_error_filename
 
 
-def exception_report(storage_backend=LocalErrorStorage()):
+def exception_report(storage_backend=LocalErrorStorage(), output_format='html'):
     """
     Decorator for creating detailed exception reports for thrown exceptions
 
@@ -37,8 +37,11 @@ def exception_report(storage_backend=LocalErrorStorage()):
         except Exception as e:
             reporter = ExceptionReporter()
             exception_data = reporter.get_traceback_data()
-            data = render_exception_report(exception_data)
-            filename = gen_error_filename(extension='html')
+            if output_format == 'html':
+                data = render_exception_report(exception_data)
+            elif output_format == 'json':
+                data = render_exception_json(exception_data)
+            filename = gen_error_filename(extension=output_format)
             report_location = storage_backend.write(filename, data)
             setattr(e, 'report', report_location)
 

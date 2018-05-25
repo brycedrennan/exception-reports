@@ -1,3 +1,4 @@
+import json
 import re
 
 import pytest
@@ -21,8 +22,26 @@ def test_decorator():
     assert 'report:/tmp' in str(e)
 
 
+def test_decorator_json():
+    @exception_report(output_format='json')
+    def foobar(text):
+        raise SpecialException("bad things!!")
+
+    try:
+        foobar('hi')
+        assert False
+    except SpecialException as e:
+        assert 'report:/tmp' in str(e)
+        with open(e.report, 'r') as f:
+            data = json.load(f)
+
+        assert data['exception_type'] == 'SpecialException'
+        assert data['exception_value'] == 'bad things!!'
+
+
 def test_decorator_with_base_exception():
     """Ensure that the library handles non-subclassed exceptions"""
+
     @exception_report()
     def foobar(text):
         raise Exception("bad things!!")
