@@ -95,7 +95,7 @@ def test_error_handler_reports_multiple_exceptions(tmpdir):
     def a(foo):
         try:
             b(foo)
-        except Exception as e:
+        except Exception:
             raise SpecialException('second problem')
 
     def b(foo):
@@ -106,7 +106,7 @@ def test_error_handler_reports_multiple_exceptions(tmpdir):
 
     try:
         a('bar')
-    except Exception as e:
+    except Exception:
         logger.exception("There were multiple problems")
 
 

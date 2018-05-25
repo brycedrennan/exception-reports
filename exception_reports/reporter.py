@@ -77,7 +77,7 @@ class ExceptionReporter(object):
                     except Exception as e:
                         try:
                             v = saferepr(e)
-                        except Exception as e1:
+                        except Exception:
                             v = 'An error occurred rendering the exception of type: ' + repr(e.__class__)
                     # The force_escape filter assume unicode, make sure that works
                     if isinstance(v, bytes):

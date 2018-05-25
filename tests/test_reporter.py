@@ -22,7 +22,7 @@ def test_exception_report_data():
 
     try:
         a('hi')
-    except Exception as e:
+    except Exception:
         exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
 
     frames = exception_data['frames']
@@ -67,7 +67,7 @@ def test_report_from_json():
 
     try:
         a('hi')
-    except Exception as e:
+    except Exception:
         exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
 
     frames = exception_data['frames']
@@ -81,9 +81,6 @@ def test_report_from_json():
 
     html_1 = render_exception_report(exception_data)
     text = render_exception_json(exception_data)
-
-    with open('report.json', 'w') as f:
-        f.write(text)
 
     json_based_data = json.loads(text)
 
@@ -113,7 +110,7 @@ def test_rendering_exception_during_exception():
     try:
         raise Exception('on purpose')
 
-    except Exception as e:
+    except Exception:
         exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
 
     local_vars = dict(exception_data['frames'][-1]['vars'])
@@ -126,7 +123,7 @@ def test_rendering_long_string():
 
     try:
         raise Exception('on purpose')
-    except Exception as e:
+    except Exception:
         exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
 
     local_vars = dict(exception_data['frames'][-1]['vars'])
@@ -163,7 +160,7 @@ def test_saving_unicode_error(tmpdir):
 def test_exception_data_json():
     try:
         raise Exception('on purpose')
-    except Exception as e:
+    except Exception:
         exception_data = ExceptionReporter(get_full_tb=False).get_traceback_data()
     render_exception_json(exception_data)
 
