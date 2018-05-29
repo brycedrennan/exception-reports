@@ -7,7 +7,7 @@ from contextlib import suppress
 from datetime import datetime, date, timezone
 from html import escape
 from pathlib import Path
-from pprint import pformat
+from pprint import pformat, saferepr
 
 import jinja2
 
@@ -38,11 +38,11 @@ def render_exception_json(exception_data):
 def _json_serializer(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
+        return obj.isoformat(sep=' ')
     elif isinstance(obj, (types.TracebackType, TracebackFrameProxy)):
         return '<Traceback object>'
 
-    return repr(obj)
+    return saferepr(obj)
 
 
 class ExceptionReporter(object):
@@ -76,8 +76,8 @@ class ExceptionReporter(object):
                         v = pformat(v)
                     except Exception as e:
                         try:
-                            v = repr(e)
-                        except Exception as e1:
+                            v = saferepr(e)
+                        except Exception:
                             v = 'An error occurred rendering the exception of type: ' + repr(e.__class__)
                     # The force_escape filter assume unicode, make sure that works
                     if isinstance(v, bytes):

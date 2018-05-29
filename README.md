@@ -202,6 +202,11 @@ def foobar(text):
 
 ## Changelog
 
+#### 0.4.0
+ - Ensure the JSON version of exception data has the same data as the html version
+ - Add decorator support for outputting json versions
+ - bugfix: Handle exceptions throw from `Exception` directly
+
 #### 0.3.1
  - If an error happens while loading the source context it's now gracefully handled instead of stopping the report from being generated
 
