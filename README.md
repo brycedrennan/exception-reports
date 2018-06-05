@@ -1,3 +1,5 @@
+[![build status](https://travis-ci.org/CircleUp/exception-reports.svg)](https://travis-ci.org/CircleUp/exception-reports)
+
 # Exception Reports
 
 [![build status](https://travis-ci.org/CircleUp/exception-reports.svg)](https://travis-ci.org/CircleUp/exception-reports)
