@@ -1,11 +1,11 @@
 import asyncio
 import logging
-import re
 from copy import deepcopy
 from logging.config import dictConfig
 
+import boto3
 import pytest
-import responses
+from moto import mock_s3
 
 from exception_reports.logs import async_exception_handler, DEFAULT_LOGGING_CONFIG
 from exception_reports.storages import LocalErrorStorage, S3ErrorStorage
@@ -15,28 +15,38 @@ class SpecialException(Exception):
     pass
 
 
-@responses.activate
+@mock_s3
 def test_s3_error_handler():
+    bucket = 'my-bucket'
+    prefix = 'all-exceptions/'
+    region = 'us-west-1'
+
+    s3 = boto3.client('s3', region_name=region)
+    s3.create_bucket(Bucket=bucket)
+
+    def list_keys():
+        return [o['Key'] for o in s3.list_objects(Bucket=bucket, Delimiter='/', Prefix=prefix).get('Contents', [])]
+
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
     logging_config['filters']['add_exception_report']['storage_backend'] = S3ErrorStorage(
         access_key='access_key',
         secret_key='secret_key',
-        bucket='my_bucket',
-        prefix='all-exceptions/'
+        bucket=bucket,
+        prefix=prefix,
+        region=region,
     )
 
     dictConfig(logging_config)
 
-    responses.add(responses.PUT, re.compile(r'https://my_bucket.s3.amazonaws.com/all-exceptions/.*'), status=200)
-
     logger = logging.getLogger(__name__)
 
     logger.info('this is information')
-    assert not responses.calls
+    assert list_keys() == []
 
     logger.error('this is a problem')
-    assert len(responses.calls) == 1
-    assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
+    keys = list_keys()
+    assert len(keys) == 1
+    assert keys[0].endswith('.html')
 
 
 def test_error_handler_reports_z(tmpdir):

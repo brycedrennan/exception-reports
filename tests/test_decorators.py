@@ -1,8 +1,8 @@
 import json
-import re
 
+import boto3
 import pytest
-import responses
+from moto import mock_s3
 
 from exception_reports.decorators import exception_report
 from exception_reports.storages import S3ErrorStorage
@@ -84,40 +84,58 @@ def test_decorator_with_args_exception():
     assert 'report:/tmp' in str(e)
 
 
-@responses.activate
+@mock_s3
 def test_s3_decorator():
+    bucket = 'my-bucket'
+    prefix = 'all-exceptions/'
+    region = 'us-west-1'
+
+    s3 = boto3.client('s3', region_name=region)
+    s3.create_bucket(Bucket=bucket)
+
+    def list_keys():
+        return [o['Key'] for o in s3.list_objects(Bucket=bucket, Delimiter='/', Prefix=prefix).get('Contents', [])]
+
     storage_backend = S3ErrorStorage(
         access_key='access_key',
         secret_key='secret_key',
-        bucket='my_bucket',
-        prefix='all-exceptions/'
+        bucket=bucket,
+        prefix=prefix,
     )
-
-    responses.add(responses.PUT, re.compile(r'https://my_bucket.s3.amazonaws.com/all-exceptions/.*'), status=200)
 
     @exception_report(storage_backend=storage_backend)
     def foobar(text):
         raise SpecialException("bad things!!")
 
+    assert list_keys() == []
+
     with pytest.raises(SpecialException) as e:
         foobar('hi')
 
     assert 'report:https://' in str(e)
-    assert len(responses.calls) == 1
-    assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
+    assert len(list_keys()) == 1
 
 
-@responses.activate
+@mock_s3
 def test_custom_s3_decorator():
     """Example of creating a custom decorator"""
-    responses.add(responses.PUT, re.compile(r'https://my_bucket.s3.amazonaws.com/all-exceptions/.*'), status=200)
+
+    bucket = 'my-bucket'
+    prefix = 'all-exceptions/'
+    region = 'us-west-1'
+
+    s3 = boto3.client('s3', region_name=region)
+    s3.create_bucket(Bucket=bucket)
+
+    def list_keys():
+        return [o['Key'] for o in s3.list_objects(Bucket=bucket, Delimiter='/', Prefix=prefix).get('Contents', [])]
 
     def my_exception_report(f):
         storage_backend = S3ErrorStorage(
             access_key='access_key',
             secret_key='secret_key',
-            bucket='my_bucket',
-            prefix='all-exceptions/'
+            bucket=bucket,
+            prefix=prefix,
         )
 
         return exception_report(storage_backend=storage_backend)(f)
@@ -125,6 +143,8 @@ def test_custom_s3_decorator():
     @my_exception_report
     def foobar(text):
         raise SpecialException("bad things!!")
+
+    assert list_keys() == []
 
     with pytest.raises(SpecialException) as e:
         try:
@@ -134,8 +154,7 @@ def test_custom_s3_decorator():
             raise
 
     assert 'report:https://' in str(e)
-    assert len(responses.calls) == 1
-    assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
+    assert len(list_keys()) == 1
 
 
 def test_exception_spec():

@@ -1,13 +1,14 @@
 # dev/testing requirements
-pytest
-pytest-asyncio
+coverage
+moto
 pydocstyle
-pylint
 pylama
 pylama_pylint
-tox
-coverage
+pylint
+pytest
+pytest-asyncio
 responses
+tox
 
 # install setup.py
 -e .

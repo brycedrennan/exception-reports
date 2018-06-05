@@ -16,5 +16,5 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3.6",
     ],
-    install_requires=['jinja2>=2.4', 'tinys3', 'decorator>=4.1'],
+    install_requires=['jinja2>=2.4', 'boto3', 'decorator>=4.1'],
 )
