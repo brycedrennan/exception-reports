@@ -1,6 +1,8 @@
+import sys
+
 from decorator import decorator
 
-from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
+from exception_reports.reporter import render_exception_report, render_exception_json, get_traceback_data
 from exception_reports.storages import LocalErrorStorage
 from exception_reports.utils import gen_error_filename
 
@@ -35,8 +37,8 @@ def exception_report(storage_backend=LocalErrorStorage(), output_format='html'):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            reporter = ExceptionReporter()
-            exception_data = reporter.get_traceback_data()
+            exc_type, exc_value, tb = sys.exc_info()
+            exception_data = get_traceback_data()
             if output_format == 'html':
                 data = render_exception_report(exception_data)
             elif output_format == 'json':
@@ -49,7 +51,7 @@ def exception_report(storage_backend=LocalErrorStorage(), output_format='html'):
 
             if ExceptionType == Exception:
                 # this way of altering the message isn't as good but it works for raw Exception objects
-                e = ExceptionType(f'{str(e)} [report:{report_location}]').with_traceback(reporter.tb)
+                e = ExceptionType(f'{str(e)} [report:{report_location}]').with_traceback(tb)
             else:
                 def my_str(self):
                     m = ExceptionType.__str__(self)

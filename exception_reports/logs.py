@@ -1,7 +1,7 @@
 import logging
 import time
 
-from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
+from exception_reports.reporter import render_exception_report, render_exception_json, get_traceback_data
 from exception_reports.storages import LocalErrorStorage
 from exception_reports.traceback import get_logger_traceback
 from exception_reports.utils import gen_error_filename
@@ -35,7 +35,7 @@ class AddExceptionReportFilter(logging.Filter):
                 record._exception_data = None
             exc_info = record.exc_info or (None, record.getMessage(), get_logger_traceback())
             try:
-                record._exception_data = ExceptionReporter(*exc_info).get_traceback_data()
+                record._exception_data = get_traceback_data(*exc_info)
             except Exception as e:
                 logger.warning(f"Error getting traceback data {repr(e)}")
 
