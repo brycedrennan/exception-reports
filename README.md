@@ -203,6 +203,8 @@ def foobar(text):
 ## Changelog
 
 #### 1.0.0
+ - Feature: Default to not showing less usefull "full stacktrace"
+ - Feature: Add platform data to report
  - Feature: Allow specification of a data_processor function that can alter the exception data
  - Feature: Safer filenames (no colon characters)
  - Bugfix: Handle all builtin exception types when attaching a message to an exception object

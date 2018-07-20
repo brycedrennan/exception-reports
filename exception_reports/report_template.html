@@ -310,6 +310,15 @@
             <td>{{ server_time }}</td>
         </tr>
     </table>
+    <strong>Platform</strong>
+    <table class="meta">
+        {% for k, v in platform.items() %}
+        <tr>
+            <th>{{ k }}:</th>
+            <td>{{ v }}</td>
+        </tr>
+        {% endfor %}
+    </table>
 </div>
 {% if unicode_hint %}
     <div id="unicode-hint">

@@ -58,6 +58,7 @@ def test_error_handler_reports(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
     logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
+    logging_config['filters']['add_exception_report']['output_format'] = 'html'
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)

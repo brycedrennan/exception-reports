@@ -9,6 +9,7 @@ from datetime import datetime, date, timezone
 from html import escape
 from pathlib import Path
 from pprint import pformat, saferepr
+import platform
 
 import jinja2
 
@@ -54,7 +55,7 @@ def _json_serializer(obj):
     return saferepr(obj)
 
 
-def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=True, max_var_length=4096 + 2048):
+def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=False, max_var_length=4096 + 2048):
     """
     Return a dictionary containing exception information.
 
@@ -107,6 +108,7 @@ def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=True,
                 unicode_hint.encode('utf8')
             except UnicodeEncodeError:
                 unicode_hint = unicode_hint.encode('utf8', 'surrogateescape')
+
     c = {
         'unicode_hint': unicode_hint,
         'frames': frames,
@@ -114,6 +116,7 @@ def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=True,
         'sys_version_info': '%d.%d.%d' % sys.version_info[0:3],
         'server_time': datetime.now(timezone.utc),
         'sys_path': sys.path,
+        'platform': platform.uname()._asdict()
     }
     # Check whether exception info is available
     if exc_type:
@@ -249,11 +252,11 @@ def get_traceback_frames(exc_value=None, tb=None, get_full_tb=True):
     return frames
 
 
-def create_exception_report(exc_type, exc_value, tb, output_format, storage_backend, data_processor=None):
+def create_exception_report(exc_type, exc_value, tb, output_format, storage_backend, data_processor=None, get_full_tb=False):
     """
     Create an exception report and return its location
     """
-    exception_data = get_exception_data(exc_type, exc_value, tb)
+    exception_data = get_exception_data(exc_type, exc_value, tb, get_full_tb=get_full_tb)
     if data_processor:
         exception_data = data_processor(exception_data)
 
