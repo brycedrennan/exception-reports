@@ -193,7 +193,7 @@ def foobar(text):
 
 ## Updating package on pypi
 
-    git tag 0.3.0
+    git tag 1.0.0
     git push --tags
     python setup.py bdist_wheel
     python setup.py sdist
@@ -201,6 +201,13 @@ def foobar(text):
     
 
 ## Changelog
+
+#### 1.0.0
+ - Feature: Allow specification of a data_processor function that can alter the exception data
+ - Feature: Safer filenames (no colon characters)
+ - Refactor: Combine repetitive code into create_exception_report
+ - Refactor: Simplify logging API
+ - Refactor: Split ExceptionReporter into component functions.
 
 #### 0.4.0
  - Ensure the JSON version of exception data has the same data as the html version

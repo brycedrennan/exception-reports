@@ -2,12 +2,11 @@ import sys
 
 from decorator import decorator
 
-from exception_reports.reporter import render_exception_report, render_exception_json, get_traceback_data
+from exception_reports.reporter import append_to_exception_message, create_exception_report
 from exception_reports.storages import LocalErrorStorage
-from exception_reports.utils import gen_error_filename
 
 
-def exception_report(storage_backend=LocalErrorStorage(), output_format='html'):
+def exception_report(storage_backend=LocalErrorStorage(), output_format='html', data_processor=None):
     """
     Decorator for creating detailed exception reports for thrown exceptions
 
@@ -38,28 +37,15 @@ def exception_report(storage_backend=LocalErrorStorage(), output_format='html'):
             return func(*args, **kwargs)
         except Exception as e:
             exc_type, exc_value, tb = sys.exc_info()
-            exception_data = get_traceback_data()
-            if output_format == 'html':
-                data = render_exception_report(exception_data)
-            elif output_format == 'json':
-                data = render_exception_json(exception_data)
-            filename = gen_error_filename(extension=output_format)
-            report_location = storage_backend.write(filename, data)
+
+            report_location = create_exception_report(
+                exc_type, exc_value, tb, output_format,
+                storage_backend=storage_backend,
+                data_processor=data_processor
+            )
+
+            e = append_to_exception_message(e, tb, f'[report:{report_location}]')
             setattr(e, 'report', report_location)
-
-            ExceptionType = type(e)
-
-            if ExceptionType == Exception:
-                # this way of altering the message isn't as good but it works for raw Exception objects
-                e = ExceptionType(f'{str(e)} [report:{report_location}]').with_traceback(tb)
-            else:
-                def my_str(self):
-                    m = ExceptionType.__str__(self)
-                    return f'{m} [report:{report_location}]'
-
-                NewExceptionType = type(ExceptionType.__name__, (ExceptionType,), {'__str__': my_str})
-
-                e.__class__ = NewExceptionType
 
             # We want to raise the original exception:
             #    1) with a modified message containing the report location

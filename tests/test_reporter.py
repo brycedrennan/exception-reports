@@ -1,7 +1,7 @@
 import json
 import os
 
-from exception_reports.reporter import render_exception_report, render_exception_json, get_traceback_data, get_lines_from_file
+from exception_reports.reporter import render_exception_html, render_exception_json, get_exception_data, get_lines_from_file
 from exception_reports.storages import LocalErrorStorage
 
 
@@ -23,7 +23,7 @@ def test_exception_report_data():
     try:
         a('hi')
     except Exception:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
 
     frames = exception_data['frames']
 
@@ -68,7 +68,7 @@ def test_report_from_json():
     try:
         a('hi')
     except Exception:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
 
     frames = exception_data['frames']
 
@@ -79,12 +79,12 @@ def test_report_from_json():
     local_vars = dict(exception_data['frames'][-1]['vars'])
     assert local_vars['green'] == '93'
 
-    html_1 = render_exception_report(exception_data)
+    html_1 = render_exception_html(exception_data)
     text = render_exception_json(exception_data)
 
     json_based_data = json.loads(text)
 
-    html_2 = render_exception_report(json_based_data)
+    html_2 = render_exception_html(json_based_data)
     assert html_1 == html_2
 
 
@@ -111,7 +111,7 @@ def test_rendering_exception_during_exception():
         raise Exception('on purpose')
 
     except Exception:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
 
     local_vars = dict(exception_data['frames'][-1]['vars'])
     assert 'An error occurred rendering' in local_vars['foo']
@@ -124,7 +124,7 @@ def test_rendering_long_string():
     try:
         raise Exception('on purpose')
     except Exception:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
 
     local_vars = dict(exception_data['frames'][-1]['vars'])
 
@@ -136,9 +136,9 @@ def test_rendering_unicode_error(tmpdir):
     try:
         some_bytes.decode('utf8')
     except UnicodeDecodeError:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
 
-    html = render_exception_report(exception_data)
+    html = render_exception_html(exception_data)
     assert 'string that could not be encoded' in html
     storage_backend = LocalErrorStorage(output_path=str(tmpdir))
     storage_backend.write('bug_report.html', html)
@@ -149,9 +149,9 @@ def test_saving_unicode_error(tmpdir):
     try:
         bad_url.encode('utf8')
     except UnicodeEncodeError:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
 
-    html = render_exception_report(exception_data)
+    html = render_exception_html(exception_data)
     assert 'string that could not be encoded' in html
     storage_backend = LocalErrorStorage(output_path=str(tmpdir))
     storage_backend.write('bug_report.html', html)
@@ -161,7 +161,7 @@ def test_exception_data_json():
     try:
         raise Exception('on purpose')
     except Exception:
-        exception_data = get_traceback_data(get_full_tb=False)
+        exception_data = get_exception_data(get_full_tb=False)
     render_exception_json(exception_data)
 
 

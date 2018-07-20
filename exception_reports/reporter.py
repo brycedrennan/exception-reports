@@ -1,3 +1,4 @@
+import functools
 import json
 import logging
 import re
@@ -12,26 +13,34 @@ from pprint import pformat, saferepr
 import jinja2
 
 from exception_reports.traceback import get_logger_traceback, TracebackFrameProxy
-from exception_reports.utils import force_text
+from exception_reports.utils import force_text, gen_error_filename
 
 logger = logging.getLogger(__name__)
 
-_CURRENT_DIR = Path(__file__).parent
 
-with open(_CURRENT_DIR / 'report_template.html', 'r') as f:
-    TECHNICAL_500_TEMPLATE = f.read()
-    TECHNICAL_500_TEMPLATE = re.sub(r'\s{2,}', ' ', TECHNICAL_500_TEMPLATE)
-    TECHNICAL_500_TEMPLATE = re.sub(r'\n', '', TECHNICAL_500_TEMPLATE)
-    TECHNICAL_500_TEMPLATE = re.sub(r'> <', '><', TECHNICAL_500_TEMPLATE)
+@functools.lru_cache()
+def _report_template():
+    """get the report template"""
+    current_dir = Path(__file__).parent
+
+    with open(current_dir / 'report_template.html', 'r') as f:
+        template = f.read()
+        template = re.sub(r'\s{2,}', ' ', template)
+        template = re.sub(r'\n', '', template)
+        template = re.sub(r'> <', '><', template)
+    return template
 
 
-def render_exception_report(exception_data):
+def render_exception_html(exception_data, report_template=None):
+    """Render exception_data as an html report"""
+    report_template = report_template or _report_template()
     jinja_env = jinja2.Environment(loader=jinja2.BaseLoader(), extensions=['jinja2.ext.autoescape'])
     exception_data['repr'] = repr
-    return jinja_env.from_string(TECHNICAL_500_TEMPLATE).render(exception_data)
+    return jinja_env.from_string(report_template).render(exception_data)
 
 
 def render_exception_json(exception_data):
+    """Render exception_data as a json object"""
     return json.dumps(exception_data, default=_json_serializer)
 
 
@@ -45,9 +54,11 @@ def _json_serializer(obj):
     return saferepr(obj)
 
 
-def get_traceback_data(exc_type=None, exc_value=None, tb=None, get_full_tb=True, max_var_length=4096 + 2048):
-    """Return a dictionary containing traceback information.
-    A class to organize and coordinate reporting on exceptions.
+def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=True, max_var_length=4096 + 2048):
+    """
+    Return a dictionary containing exception information.
+
+    if exc_type, exc_value, and tb are not provided they will be supplied by sys.exc_info()
 
     max_var_length: how long a variable's output can be before it's truncated
 
@@ -236,3 +247,42 @@ def get_traceback_frames(exc_value=None, tb=None, get_full_tb=True):
             added_full_tb = True
 
     return frames
+
+
+def create_exception_report(exc_type, exc_value, tb, output_format, storage_backend, data_processor=None):
+    """
+    Create an exception report and return its location
+    """
+    exception_data = get_exception_data(exc_type, exc_value, tb)
+    if data_processor:
+        exception_data = data_processor
+
+    if output_format == 'html':
+        text = render_exception_html(exception_data)
+    elif output_format == 'json':
+        text = render_exception_json(exception_data)
+    else:
+        raise TypeError("Exception report format not correctly specified")
+
+    filename = gen_error_filename(extension=output_format)
+
+    report_location = storage_backend.write(filename, text)
+
+    return report_location
+
+
+def append_to_exception_message(e, tb, added_message):
+    ExceptionType = type(e)
+
+    if ExceptionType == Exception:
+        # this way of altering the message isn't as good but it works for raw Exception objects
+        e = ExceptionType(f'{str(e)} {added_message}').with_traceback(tb)
+    else:
+        def my_str(self):
+            m = ExceptionType.__str__(self)
+            return f'{m} {added_message}'
+
+        NewExceptionType = type(ExceptionType.__name__, (ExceptionType,), {'__str__': my_str})
+
+        e.__class__ = NewExceptionType
+    return e
