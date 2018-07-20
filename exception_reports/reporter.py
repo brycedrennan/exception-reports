@@ -255,7 +255,7 @@ def create_exception_report(exc_type, exc_value, tb, output_format, storage_back
     """
     exception_data = get_exception_data(exc_type, exc_value, tb)
     if data_processor:
-        exception_data = data_processor
+        exception_data = data_processor(exception_data)
 
     if output_format == 'html':
         text = render_exception_html(exception_data)
@@ -274,8 +274,8 @@ def create_exception_report(exc_type, exc_value, tb, output_format, storage_back
 def append_to_exception_message(e, tb, added_message):
     ExceptionType = type(e)
 
-    if ExceptionType == Exception:
-        # this way of altering the message isn't as good but it works for raw Exception objects
+    if ExceptionType.__module__ == 'builtins':
+        # this way of altering the message isn't as good but it works for builtin exception types
         e = ExceptionType(f'{str(e)} {added_message}').with_traceback(tb)
     else:
         def my_str(self):

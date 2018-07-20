@@ -205,6 +205,7 @@ def foobar(text):
 #### 1.0.0
  - Feature: Allow specification of a data_processor function that can alter the exception data
  - Feature: Safer filenames (no colon characters)
+ - Bugfix: Handle all builtin exception types when attaching a message to an exception object
  - Refactor: Combine repetitive code into create_exception_report
  - Refactor: Simplify logging API
  - Refactor: Split ExceptionReporter into component functions.
