@@ -1,5 +1,7 @@
 # Exception Reports
 
+[![build status](https://travis-ci.org/CircleUp/exception-reports.svg)](https://travis-ci.org/CircleUp/exception-reports)
+
 Generate an interactive stack trace that includes variable state at each level.
 
 ## Features

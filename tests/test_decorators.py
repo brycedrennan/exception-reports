@@ -46,12 +46,11 @@ def test_decorator_with_base_exception():
     def foobar(text):
         raise Exception("bad things!!")
 
-    try:
+    with pytest.raises(Exception) as e:
         foobar('hi')
-    except Exception as e:
-        if 'bad things' not in repr(e):
-            raise
-        assert 'report:/tmp' in str(e)
+
+    assert 'bad things' in str(e)
+    assert 'report:/tmp' in str(e)
 
 
 def test_decorator_with_type_exception():
@@ -61,12 +60,11 @@ def test_decorator_with_type_exception():
     def foobar(text):
         raise TypeError("bad things!!")
 
-    try:
+    with pytest.raises(TypeError) as e:
         foobar('hi')
-    except Exception as e:
-        if 'bad things' not in repr(e):
-            raise
-        assert 'report:/tmp' in str(e)
+
+    assert 'bad things' in str(e)
+    assert 'report:/tmp' in str(e)
 
 
 class SpecialArgsException(Exception):
