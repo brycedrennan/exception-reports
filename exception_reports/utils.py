@@ -37,4 +37,4 @@ def force_text(s, encoding='utf-8', strings_only=False, errors='strict'):
 
 
 def gen_error_filename(extension):
-    return f'{datetime.datetime.now(datetime.timezone.utc)}_{uuid.uuid4().hex}.{extension}'.replace(' ', '_')
+    return f'{datetime.datetime.now(datetime.timezone.utc)}_{uuid.uuid4().hex}.{extension}'.replace(' ', '_').replace(':', '-')

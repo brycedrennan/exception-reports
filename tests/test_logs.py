@@ -58,6 +58,7 @@ def test_error_handler_reports(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
     logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
+    logging_config['filters']['add_exception_report']['output_format'] = 'html'
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ def test_error_handler_json(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
     logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
-    logging_config['filters']['add_exception_report']['output_json'] = True
+    logging_config['filters']['add_exception_report']['output_format'] = 'json'
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ def test_error_handler_json(tmpdir):
 
     logger.error('this is a problem')
 
-    assert len(tmpdir.listdir()) == 2
+    assert len(tmpdir.listdir()) == 1
 
 
 def test_error_handler_reports_multiple_exceptions(tmpdir):

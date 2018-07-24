@@ -1,10 +1,9 @@
 import logging
 import time
 
-from exception_reports.reporter import ExceptionReporter, render_exception_report, render_exception_json
+from exception_reports.reporter import create_exception_report
 from exception_reports.storages import LocalErrorStorage
 from exception_reports.traceback import get_logger_traceback
-from exception_reports.utils import gen_error_filename
 
 logger = logging.getLogger(__name__)
 
@@ -19,39 +18,21 @@ def async_exception_handler(loop, context):
 
 
 class AddExceptionReportFilter(logging.Filter):
-    def __init__(self, storage_backend=LocalErrorStorage(), output_html=True, output_json=False):
+    def __init__(self, storage_backend=LocalErrorStorage(), output_format='json'):
         super().__init__()
         self.storage_backend = storage_backend
-        self.output_html = output_html
-        self.output_json = output_json
-        self.enabled = output_json or output_html
+        self.output_format = output_format
 
     def filter(self, record):
-        if not self.enabled:
-            return True
-
         if record.levelno >= logging.ERROR:
-            if not getattr(record, '_exception_data', None):
-                record._exception_data = None
-            exc_info = record.exc_info or (None, record.getMessage(), get_logger_traceback())
-            try:
-                record._exception_data = ExceptionReporter(*exc_info).get_traceback_data()
-            except Exception as e:
-                logger.warning(f"Error getting traceback data {repr(e)}")
-
             if not getattr(record, 'data', None):
                 setattr(record, 'data', {})
+            exc_type, exc_value, tb = record.exc_info or (None, record.getMessage(), get_logger_traceback())
 
-            if record._exception_data:
-                if self.output_html:
-                    html = render_exception_report(record._exception_data)
-                    filename = gen_error_filename(extension='html')
-                    record.data['error_report'] = self.storage_backend.write(filename, html)
-
-                if self.output_json:
-                    json_str = render_exception_json(record._exception_data)
-                    filename = gen_error_filename(extension='json')
-                    record.data['error_report_json'] = self.storage_backend.write(filename, json_str)
+            try:
+                record.data['error_report'] = create_exception_report(exc_type, exc_value, tb, self.output_format, self.storage_backend)
+            except Exception as e:
+                logger.warning(f"Error generating exception report {repr(e)}")
 
         return True
 
