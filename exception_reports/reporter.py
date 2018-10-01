@@ -49,7 +49,8 @@ def _json_serializer(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, (datetime, date)):
         return obj.isoformat(sep=" ")
-    elif isinstance(obj, (types.TracebackType, TracebackFrameProxy)):
+
+    if isinstance(obj, (types.TracebackType, TracebackFrameProxy)):
         return "<Traceback object>"
 
     return saferepr(obj)

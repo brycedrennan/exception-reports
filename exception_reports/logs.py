@@ -34,7 +34,7 @@ class AddExceptionReportFilter(logging.Filter):
                     exc_type, exc_value, tb, self.output_format, self.storage_backend
                 )
             except Exception as e:
-                logger.warning(f"Error generating exception report {repr(e)}")
+                logger.warning(f"Error generating exception report {repr(e)}")  # noqa
 
         return True
 

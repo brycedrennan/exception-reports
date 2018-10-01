@@ -8,7 +8,7 @@ import boto3
 logger = logging.getLogger(__name__)
 
 
-class ErrorStorage(object):
+class ErrorStorage:
     def write(self, filename, data):
         pass
 

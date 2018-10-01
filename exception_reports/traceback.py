@@ -16,7 +16,7 @@ def get_logger_traceback():  # noqa
         return TracebackFrameProxy(sys.exc_info()[2])
 
 
-class TracebackFrameProxy(object):
+class TracebackFrameProxy:
     """Proxies a traceback frame to hide parts of the trace related to logging.."""
 
     def __init__(self, tb, frames_level=0):

@@ -72,7 +72,7 @@ def test_report_from_json():
             " " * 180,
         ]
 
-        class HardToRender(object):
+        class HardToRender:
             def __repr__(self):
                 return "".join(_fuzz_tokens)
 
@@ -118,7 +118,7 @@ def test_rendering_exception_during_exception():
         def __str__(self):
             raise Exception("NO RENDERING Exc")
 
-    class ErrorProneThing(object):
+    class ErrorProneThing:
         def __repr__(self):
             return str(self)
 
