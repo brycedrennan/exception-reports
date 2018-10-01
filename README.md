@@ -197,7 +197,7 @@ def foobar(text):
 
 ## Updating package on pypi
 
-    git tag 1.0.0
+    git tag 1.1.0
     git push --tags
     python setup.py bdist_wheel
     python setup.py sdist
@@ -205,6 +205,12 @@ def foobar(text):
     
 
 ## Changelog
+
+#### 1.1.0
+ - Bugfix. tinys3 was abandoned. switching to boto3
+ - Dev: Added black autoformatter.
+ - Dev: Added makefile with `test`, `lint`, and `autoformat` commands
+ - Dev: Autoformatted code, fixed lint issues
 
 #### 1.0.0
  - Feature: Default to not showing less usefull "full stacktrace"
