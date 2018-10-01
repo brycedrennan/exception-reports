@@ -48,8 +48,8 @@ class TracebackFrameProxy(object):
         found_log_call = False
 
         while f:
-            if f.f_code.co_name == '_log' and 'logging' in f.f_code.co_filename:
-                if 'makeRecord' in f.f_code.co_names:
+            if f.f_code.co_name == "_log" and "logging" in f.f_code.co_filename:
+                if "makeRecord" in f.f_code.co_names:
                     f = f.f_back.f_back
                     found_log_call = True
                     break
