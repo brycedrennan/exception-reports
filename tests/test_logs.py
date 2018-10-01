@@ -46,7 +46,7 @@ def test_s3_error_handler():
     logger.error('this is a problem')
     keys = list_keys()
     assert len(keys) == 1
-    assert keys[0].endswith('.html')
+    assert keys[0].endswith('.json')
 
 
 def test_error_handler_reports_z(tmpdir):
