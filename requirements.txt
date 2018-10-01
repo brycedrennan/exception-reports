@@ -1,14 +1,16 @@
 # dev/testing requirements
+black==18.9b0
 coverage
 moto
 pydocstyle
-pylama
-pylama_pylint
+pylava
+pylava-pylint
 pylint
 pytest
 pytest-asyncio
 responses
 tox
+twine
 
 # install setup.py
 -e .
