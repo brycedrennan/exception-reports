@@ -1,11 +1,11 @@
 import asyncio
 import logging
-import re
 from copy import deepcopy
 from logging.config import dictConfig
 
+import boto3
 import pytest
-import responses
+from moto import mock_s3
 
 from exception_reports.logs import async_exception_handler, DEFAULT_LOGGING_CONFIG
 from exception_reports.storages import LocalErrorStorage, S3ErrorStorage
@@ -15,41 +15,47 @@ class SpecialException(Exception):
     pass
 
 
-@responses.activate
+@mock_s3
 def test_s3_error_handler():
+    bucket = "my-bucket"
+    prefix = "all-exceptions/"
+    region = "us-west-1"
+
+    s3 = boto3.client("s3", region_name=region)
+    s3.create_bucket(Bucket=bucket)
+
+    def list_keys():
+        return [o["Key"] for o in s3.list_objects(Bucket=bucket, Delimiter="/", Prefix=prefix).get("Contents", [])]
+
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
-    logging_config['filters']['add_exception_report']['storage_backend'] = S3ErrorStorage(
-        access_key='access_key',
-        secret_key='secret_key',
-        bucket='my_bucket',
-        prefix='all-exceptions/'
+    logging_config["filters"]["add_exception_report"]["storage_backend"] = S3ErrorStorage(
+        access_key="access_key", secret_key="secret_key", bucket=bucket, prefix=prefix, region=region
     )
 
     dictConfig(logging_config)
 
-    responses.add(responses.PUT, re.compile(r'https://my_bucket.s3.amazonaws.com/all-exceptions/.*'), status=200)
-
     logger = logging.getLogger(__name__)
 
-    logger.info('this is information')
-    assert not responses.calls
+    logger.info("this is information")
+    assert list_keys() == []
 
-    logger.error('this is a problem')
-    assert len(responses.calls) == 1
-    assert responses.calls[0].request.url.startswith('https://my_bucket.s3.amazonaws.com/all-exceptions/')
+    logger.error("this is a problem")
+    keys = list_keys()
+    assert len(keys) == 1
+    assert keys[0].endswith(".json")
 
 
 def test_error_handler_reports_z(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
+    logging_config["filters"]["add_exception_report"]["storage_backend"] = LocalErrorStorage(output_path=tmpdir)
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
 
     assert not tmpdir.listdir()
 
-    logger.error('this is a problem')
+    logger.error("this is a problem")
 
     assert len(tmpdir.listdir()) == 1
 
@@ -57,15 +63,15 @@ def test_error_handler_reports_z(tmpdir):
 def test_error_handler_reports(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
-    logging_config['filters']['add_exception_report']['output_format'] = 'html'
+    logging_config["filters"]["add_exception_report"]["storage_backend"] = LocalErrorStorage(output_path=tmpdir)
+    logging_config["filters"]["add_exception_report"]["output_format"] = "html"
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
 
     assert not tmpdir.listdir()
 
-    logger.error('this is a problem')
+    logger.error("this is a problem")
 
     assert len(tmpdir.listdir()) == 1
 
@@ -73,22 +79,22 @@ def test_error_handler_reports(tmpdir):
 def test_error_handler_json(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
 
-    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
-    logging_config['filters']['add_exception_report']['output_format'] = 'json'
+    logging_config["filters"]["add_exception_report"]["storage_backend"] = LocalErrorStorage(output_path=tmpdir)
+    logging_config["filters"]["add_exception_report"]["output_format"] = "json"
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
 
     assert not tmpdir.listdir()
 
-    logger.error('this is a problem')
+    logger.error("this is a problem")
 
     assert len(tmpdir.listdir()) == 1
 
 
 def test_error_handler_reports_multiple_exceptions(tmpdir):
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
-    logging_config['filters']['add_exception_report']['storage_backend'] = LocalErrorStorage(output_path=tmpdir)
+    logging_config["filters"]["add_exception_report"]["storage_backend"] = LocalErrorStorage(output_path=tmpdir)
     dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
@@ -97,16 +103,16 @@ def test_error_handler_reports_multiple_exceptions(tmpdir):
         try:
             b(foo)
         except Exception:
-            raise SpecialException('second problem')
+            raise SpecialException("second problem")
 
     def b(foo):
         c(foo)
 
     def c(foo):
-        raise SpecialException('original problem')
+        raise SpecialException("original problem")
 
     try:
-        a('bar')
+        a("bar")
     except Exception:
         logger.exception("There were multiple problems")
 
@@ -136,15 +142,15 @@ async def test_async_handler(event_loop):
         finally:
             todo_queue.task_done()
 
-    container = {'num': 0}
+    container = {"num": 0}
 
     async def process_number(n, sum_container):
         await asyncio.sleep(0.002 * n)
-        container['num'] = n
+        container["num"] = n
 
         print(n)
         if n == 10:
-            raise SpecialException('Something has gone terribly wrong')
+            raise SpecialException("Something has gone terribly wrong")
 
         return n + 1
 

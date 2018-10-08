@@ -1,13 +1,16 @@
 # dev/testing requirements
+black==18.9b0
+coverage
+moto
+pydocstyle
+pylava
+pylava-pylint
+pylint
 pytest
 pytest-asyncio
-pydocstyle
-pylint
-pylama
-pylama_pylint
-tox
-coverage
 responses
+tox
+twine
 
 # install setup.py
 -e .

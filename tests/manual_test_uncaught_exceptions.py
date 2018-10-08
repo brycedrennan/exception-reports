@@ -14,7 +14,6 @@ sys.excepthook = uncaught_exception_handler
 
 
 class SpecialArgsException(Exception):
-
     def __init__(self, message, important_var):
         super().__init__(message)
 
@@ -22,4 +21,4 @@ class SpecialArgsException(Exception):
 try:
     raise SpecialArgsException("<strong>YOLO!!!!</strong>", 24)
 except Exception:
-    raise SpecialArgsException('<strong>HELLO</strong>', 34)
+    raise SpecialArgsException("<strong>HELLO</strong>", 34)
