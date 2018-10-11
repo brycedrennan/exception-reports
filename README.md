@@ -1,8 +1,10 @@
-[![build status](https://travis-ci.org/CircleUp/exception-reports.svg)](https://travis-ci.org/CircleUp/exception-reports)
-
 # Exception Reports
 
+[![image](https://img.shields.io/pypi/v/exception-reports.svg)](https://pypi.org/project/exception-reports/)
+[![image](https://img.shields.io/pypi/pyversions/exception-reports.svg)](https://pypi.org/project/exception-reports/)
 [![build status](https://travis-ci.org/CircleUp/exception-reports.svg)](https://travis-ci.org/CircleUp/exception-reports)
+[![codecov.io](https://codecov.io/github/CircleUp/exception-reports/coverage.svg?branch=master)](https://codecov.io/github/CircleUp/exception-reports)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 Generate an interactive stack trace that includes variable state at each level.
 
@@ -196,12 +198,7 @@ def foobar(text):
 ```
 
 ## Updating package on pypi
-
-    git tag 1.1.0
-    git push --tags
-    python setup.py bdist_wheel
-    python setup.py sdist
-    twine upload dist/* -u username
+ - `make deploy`
     
 
 ## Changelog

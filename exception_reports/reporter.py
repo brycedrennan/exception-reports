@@ -169,9 +169,7 @@ def get_lines_from_file(filename, lineno, context_lines, loader=None, module_nam
         return lower_bound, pre_context, context_line, post_context
     except Exception as e:
         try:
-            context_line = (
-                f'<There was an error displaying the source file: "{repr(e)}"  The loaded source has {len(source)} lines.>'
-            )
+            context_line = f'<There was an error displaying the source file: "{repr(e)}"  The loaded source has {len(source)} lines.>'
         except Exception:
             context_line = "<There was an error displaying the source file. Further, there was an error displaying that error>"
         return lineno, [], context_line, []
@@ -209,9 +207,7 @@ def get_traceback_frames(exc_value=None, tb=None, get_full_tb=True):
         lineno = tb.tb_lineno - 1
         loader = tb.tb_frame.f_globals.get("__loader__")
         module_name = tb.tb_frame.f_globals.get("__name__") or ""
-        pre_context_lineno, pre_context, context_line, post_context = get_lines_from_file(
-            filename, lineno, 7, loader, module_name
-        )
+        pre_context_lineno, pre_context, context_line, post_context = get_lines_from_file(filename, lineno, 7, loader, module_name)
         if pre_context_lineno is None:
             pre_context_lineno = lineno
             pre_context = []

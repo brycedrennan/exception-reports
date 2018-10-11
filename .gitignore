@@ -1,7 +1,10 @@
 .DS_Store
 .idea
 .direnv
+.venv
+.coverage
 .cache
+.python-version
 *.egg-info
 __pycache__
 dist/
