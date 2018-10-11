@@ -1,11 +1,12 @@
 import asyncio
 import logging
+import re
 from copy import deepcopy
 from logging.config import dictConfig
 
-import boto3
+import httpretty
 import pytest
-from moto import mock_s3
+from httpretty import httprettified
 
 from exception_reports.logs import async_exception_handler, DEFAULT_LOGGING_CONFIG
 from exception_reports.storages import LocalErrorStorage, S3ErrorStorage
@@ -15,18 +16,12 @@ class SpecialException(Exception):
     pass
 
 
-@mock_s3
+@httprettified
 def test_s3_error_handler():
     bucket = "my-bucket"
     prefix = "all-exceptions/"
     region = "us-west-1"
-
-    s3 = boto3.client("s3", region_name=region)
-    s3.create_bucket(Bucket=bucket)
-
-    def list_keys():
-        return [o["Key"] for o in s3.list_objects(Bucket=bucket, Delimiter="/", Prefix=prefix).get("Contents", [])]
-
+    httpretty.register_uri(httpretty.PUT, re.compile(r".*amazonaws\..*"), body="")
     logging_config = deepcopy(DEFAULT_LOGGING_CONFIG)
     logging_config["filters"]["add_exception_report"]["storage_backend"] = S3ErrorStorage(
         access_key="access_key", secret_key="secret_key", bucket=bucket, prefix=prefix, region=region
@@ -37,12 +32,8 @@ def test_s3_error_handler():
     logger = logging.getLogger(__name__)
 
     logger.info("this is information")
-    assert list_keys() == []
 
     logger.error("this is a problem")
-    keys = list_keys()
-    assert len(keys) == 1
-    assert keys[0].endswith(".json")
 
 
 def test_error_handler_reports_z(tmpdir):
