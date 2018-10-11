@@ -30,9 +30,7 @@ class AddExceptionReportFilter(logging.Filter):
             exc_type, exc_value, tb = record.exc_info or (None, record.getMessage(), get_logger_traceback())
 
             try:
-                record.data["error_report"] = create_exception_report(
-                    exc_type, exc_value, tb, self.output_format, self.storage_backend
-                )
+                record.data["error_report"] = create_exception_report(exc_type, exc_value, tb, self.output_format, self.storage_backend)
             except Exception as e:
                 logger.warning(f"Error generating exception report {repr(e)}")  # noqa
 
@@ -53,13 +51,7 @@ class ExtraDataLogFormatter(logging.Formatter):
         data = getattr(record, "data", None)
         if data:
             try:
-                record.data_as_kv = " ".join(
-                    [
-                        '{}="{}"'.format(k, v.strip() if isinstance(v, str) else v)
-                        for k, v in sorted(data.items())
-                        if v is not None
-                    ]
-                )
+                record.data_as_kv = " ".join(['{}="{}"'.format(k, v.strip() if isinstance(v, str) else v) for k, v in sorted(data.items()) if v is not None])
             except AttributeError:
                 # Output something, even if 'data' wasn't a dictionary.
                 record.data_as_kv = str(data)
@@ -74,23 +66,13 @@ DEFAULT_LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {
-            "()": ExtraDataLogFormatter,
-            "format": "%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s",
-        },
+        "standard": {"()": ExtraDataLogFormatter, "format": "%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s"},
         # 'json': {
         #     '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
         #     'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
         # }
     },
     "filters": {"add_exception_report": {"()": AddExceptionReportFilter}},
-    "handlers": {
-        "console": {
-            "level": "DEBUG",
-            "filters": ["add_exception_report"],
-            "class": "logging.StreamHandler",
-            "formatter": "standard",
-        }
-    },
+    "handlers": {"console": {"level": "DEBUG", "filters": ["add_exception_report"], "class": "logging.StreamHandler", "formatter": "standard"}},
     "loggers": {"": {"handlers": ["console"], "level": "INFO", "propagate": True}},
 }

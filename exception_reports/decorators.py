@@ -38,9 +38,7 @@ def exception_report(storage_backend=LocalErrorStorage(), output_format="html", 
         except Exception as e:
             exc_type, exc_value, tb = sys.exc_info()
 
-            report_location = create_exception_report(
-                exc_type, exc_value, tb, output_format, storage_backend=storage_backend, data_processor=data_processor
-            )
+            report_location = create_exception_report(exc_type, exc_value, tb, output_format, storage_backend=storage_backend, data_processor=data_processor)
 
             e = append_to_exception_message(e, tb, f"[report:{report_location}]")
             setattr(e, "report", report_location)

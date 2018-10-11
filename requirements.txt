@@ -1,16 +1,16 @@
 # dev/testing requirements
 black==18.9b0
-coverage
+codecov==2.0.15
+coverage==4.5.1
 moto
-pydocstyle
-pylava
-pylava-pylint
-pylint
-pytest
-pytest-asyncio
-responses
-tox
-twine
+pytest==3.6.4
+pytest-asyncio==0.9.0
+pytest-cov==2.6.0
+pytest-xdist==1.23.2
+pydocstyle==2.1.1
+pylint==2.1.1
+pylava==0.2.1
+pylava-pylint==0.0.2
 
 # install setup.py
 -e .
