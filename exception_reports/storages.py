@@ -1,11 +1,17 @@
-import io
+import hmac
 import logging
 import os
 import os.path
-
-import boto3
+from base64 import b64encode
+from datetime import datetime
+from http.client import HTTPSConnection
+from wsgiref.handlers import format_date_time
 
 logger = logging.getLogger(__name__)
+
+
+class S3UploadError(Exception):
+    pass
 
 
 class ErrorStorage:
@@ -52,19 +58,48 @@ class S3ErrorStorage(ErrorStorage):
 
     def write(self, filename, data):
         try:
+
             if isinstance(data, str):
                 data = data.encode("utf8")
-            text_stream = io.BytesIO(data)
 
-            key = f"{self.prefix}{filename}"
-            s3_client = boto3.client("s3", **self._s3_resource_kwargs)
-            s3_client.upload_fileobj(Fileobj=text_stream, Key=key, Bucket=self.bucket)
+            key = f"/{self.prefix}{filename}"
 
-            subdomain = "s3"
-            if self.region is not None:
-                subdomain += "-" + self.region
+            if key.endswith("html"):
+                content_type = "text/html"
+            else:
+                content_type = "text/plain"
 
-            return f"https://{subdomain}.amazonaws.com/{self.bucket}/{key}"
+            response, uploaded_url = upload_to_s3(
+                aws_key=self._s3_resource_kwargs["aws_access_key_id"],
+                aws_secret=self._s3_resource_kwargs["aws_secret_access_key"],
+                bucket=self.bucket,
+                filename=key,
+                contents=data,
+                content_type=content_type,
+            )
+            if response.code != 200:
+                raise S3UploadError("Upload of exception report to S3 failed")
+
+            return uploaded_url
 
         except Exception:
             logger.warning("Error saving exception to s3", exc_info=True)
+
+
+def upload_to_s3(aws_key, aws_secret, bucket, filename, contents, content_type):
+    from _sha1 import sha1
+
+    timestamp = format_date_time(datetime.now().timestamp())
+    string_to_sign = "\n".join(["PUT", "", content_type, timestamp, "x-amz-acl:private", f"/{bucket}{filename}"])
+    hmac_data = hmac.new(aws_secret.encode("utf-8"), string_to_sign.encode("utf-8"), sha1).digest()
+    signed = b64encode(hmac_data).decode("utf-8")
+    headers = {
+        "Authorization": "AWS " + aws_key + ":" + signed,
+        "Content-Type": content_type,
+        "Date": timestamp,
+        "Content-Length": len(contents),
+        "x-amz-acl": "private",
+    }
+    conn = HTTPSConnection(bucket + ".s3.amazonaws.com")
+    conn.request("PUT", filename, contents, headers)
+    return conn.getresponse(), f"https://{bucket}.s3.amazonaws.com{filename}"

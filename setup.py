@@ -22,6 +22,6 @@ setup(
     download_url="https://github.com/circleup/exception-reports/tarball/" + __version__,
     keywords=["exception handler", "exceptions", "error logs"],
     classifiers=["Programming Language :: Python :: 3.6", "Programming Language :: Python :: 3.7"],
-    install_requires=["jinja2>=2.4", "boto3>=1.5.0", "decorator>=4.1"],
+    install_requires=["jinja2>=2.4", "decorator>=4.1"],
     python_requires=">=3.6",
 )
