@@ -1,9 +1,8 @@
 # Exception Reports
 
+[![Downloads](https://pepy.tech/badge/exception-reports)](https://pepy.tech/project/exception-reports)
 [![image](https://img.shields.io/pypi/v/exception-reports.svg)](https://pypi.org/project/exception-reports/)
-[![image](https://img.shields.io/pypi/pyversions/exception-reports.svg)](https://pypi.org/project/exception-reports/)
-[![build status](https://travis-ci.org/CircleUp/exception-reports.svg)](https://travis-ci.org/CircleUp/exception-reports)
-[![codecov.io](https://codecov.io/github/CircleUp/exception-reports/coverage.svg?branch=master)](https://codecov.io/github/CircleUp/exception-reports)
+![Python Checks](https://github.com/brycedrennan/exception-reports/actions/workflows/ci.yml/badge.svg)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 Generate an interactive stack trace that includes variable state at each level.
@@ -202,6 +201,13 @@ def foobar(text):
     
 
 ## Changelog
+
+#### 2.0.0
+ - feature: support python 3.8 through 3.11
+ - build: update to latest version of dependencies
+ - ci: switch to github actions
+ - style: fix lints
+ - fix: support newer jinja2 (autoescape no longer an extension)
 
 #### 1.1.0
  - Bugfix. tinys3 was abandoned. switching to boto3

@@ -2,13 +2,18 @@ import sys
 
 from decorator import decorator
 
-from exception_reports.reporter import append_to_exception_message, create_exception_report
+from exception_reports.reporter import (
+    append_to_exception_message,
+    create_exception_report,
+)
 from exception_reports.storages import LocalErrorStorage
 
 
-def exception_report(storage_backend=LocalErrorStorage(), output_format="html", data_processor=None):
+def exception_report(
+    storage_backend=LocalErrorStorage(), output_format="html", data_processor=None
+):
     """
-    Decorator for creating detailed exception reports for thrown exceptions
+    Decorator for creating detailed exception reports for thrown exceptions.
 
     Usage:
 
@@ -38,7 +43,14 @@ def exception_report(storage_backend=LocalErrorStorage(), output_format="html", 
         except Exception as e:
             exc_type, exc_value, tb = sys.exc_info()
 
-            report_location = create_exception_report(exc_type, exc_value, tb, output_format, storage_backend=storage_backend, data_processor=data_processor)
+            report_location = create_exception_report(
+                exc_type,
+                exc_value,
+                tb,
+                output_format,
+                storage_backend=storage_backend,
+                data_processor=data_processor,
+            )
 
             e = append_to_exception_message(e, tb, f"[report:{report_location}]")
             setattr(e, "report", report_location)

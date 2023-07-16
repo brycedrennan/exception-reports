@@ -2,7 +2,15 @@ import datetime
 import uuid
 from decimal import Decimal
 
-_PROTECTED_TYPES = (type(None), int, float, Decimal, datetime.datetime, datetime.date, datetime.time)
+_PROTECTED_TYPES = (
+    type(None),
+    int,
+    float,
+    Decimal,
+    datetime.datetime,
+    datetime.date,
+    datetime.time,
+)
 
 
 def _is_protected_type(obj):
@@ -37,4 +45,8 @@ def force_text(s, encoding="utf-8", strings_only=False, errors="strict"):
 
 
 def gen_error_filename(extension):
-    return f"{datetime.datetime.now(datetime.timezone.utc)}_{uuid.uuid4().hex}.{extension}".replace(" ", "_").replace(":", "-")
+    return f"{datetime.datetime.now(datetime.timezone.utc)}_{uuid.uuid4().hex}.{extension}".replace(
+        " ", "_"
+    ).replace(
+        ":", "-"
+    )

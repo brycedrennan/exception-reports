@@ -6,7 +6,7 @@ from exception_reports.storages import upload_to_s3
 
 @httprettified
 def test_s3_upload():
-    url = f"https://my-bucket.s3.amazonaws.com/foobar.txt"
+    url = "https://my-bucket.s3.amazonaws.com/foobar.txt"
     httpretty.register_uri(httpretty.PUT, url)
 
     response, url = upload_to_s3(

@@ -41,7 +41,14 @@ class LocalErrorStorage(ErrorStorage):
 
 
 class S3ErrorStorage(ErrorStorage):
-    def __init__(self, bucket, access_key: str = None, secret_key: str = None, region: str = None, prefix: str = ""):
+    def __init__(
+        self,
+        bucket,
+        access_key: str = None,
+        secret_key: str = None,
+        region: str = None,
+        prefix: str = "",
+    ):
         self.bucket = bucket
         self.prefix = prefix
         self.region = region
@@ -56,9 +63,8 @@ class S3ErrorStorage(ErrorStorage):
 
         self._s3_resource_kwargs = s3_resource_kwargs
 
-    def write(self, filename, data):
+    def write(self, filename, data):  # noqa
         try:
-
             if isinstance(data, str):
                 data = data.encode("utf8")
 
@@ -82,7 +88,7 @@ class S3ErrorStorage(ErrorStorage):
 
             return uploaded_url
 
-        except Exception:
+        except Exception:  # noqa
             logger.warning("Error saving exception to s3", exc_info=True)
 
 
@@ -90,8 +96,19 @@ def upload_to_s3(aws_key, aws_secret, bucket, filename, contents, content_type):
     from _sha1 import sha1
 
     timestamp = format_date_time(datetime.now().timestamp())
-    string_to_sign = "\n".join(["PUT", "", content_type, timestamp, "x-amz-acl:private", f"/{bucket}{filename}"])
-    hmac_data = hmac.new(aws_secret.encode("utf-8"), string_to_sign.encode("utf-8"), sha1).digest()
+    string_to_sign = "\n".join(
+        [
+            "PUT",
+            "",
+            content_type,
+            timestamp,
+            "x-amz-acl:private",
+            f"/{bucket}{filename}",
+        ]
+    )
+    hmac_data = hmac.new(
+        aws_secret.encode("utf-8"), string_to_sign.encode("utf-8"), sha1
+    ).digest()
     signed = b64encode(hmac_data).decode("utf-8")
     headers = {
         "Authorization": "AWS " + aws_key + ":" + signed,

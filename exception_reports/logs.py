@@ -27,12 +27,18 @@ class AddExceptionReportFilter(logging.Filter):
         if record.levelno >= logging.ERROR:
             if not getattr(record, "data", None):
                 setattr(record, "data", {})
-            exc_type, exc_value, tb = record.exc_info or (None, record.getMessage(), get_logger_traceback())
+            exc_type, exc_value, tb = record.exc_info or (
+                None,
+                record.getMessage(),
+                get_logger_traceback(),
+            )
 
             try:
-                record.data["error_report"] = create_exception_report(exc_type, exc_value, tb, self.output_format, self.storage_backend)
-            except Exception as e:
-                logger.warning(f"Error generating exception report {repr(e)}")  # noqa
+                record.data["error_report"] = create_exception_report(
+                    exc_type, exc_value, tb, self.output_format, self.storage_backend
+                )
+            except Exception as e:  # noqa
+                logger.warning(f"Error generating exception report {repr(e)}")
 
         return True
 
@@ -43,7 +49,7 @@ class ExtraDataLogFormatter(logging.Formatter):
     def __init__(self, *args, **kwargs):
         if kwargs.pop("utc_timezone", False):
             self.converter = time.gmtime
-        super(ExtraDataLogFormatter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _set_data_as_kv(self, record):
         """Sets 'data_as_kv' attribute as a string of key value pairs."""
@@ -51,7 +57,12 @@ class ExtraDataLogFormatter(logging.Formatter):
         data = getattr(record, "data", None)
         if data:
             try:
-                record.data_as_kv = " ".join(['{}="{}"'.format(k, v.strip() if isinstance(v, str) else v) for k, v in sorted(data.items()) if v is not None])
+                kv_data = [(k, v) for k, v in sorted(data.items()) if v is not None]
+                kv_data = [
+                    (k, v.strip() if isinstance(v, str) else v) for k, v in kv_data
+                ]
+                kv_data = [f'{k}="{v}"' for k, v in kv_data]
+                record.data_as_kv = " ".join(kv_data)
             except AttributeError:
                 # Output something, even if 'data' wasn't a dictionary.
                 record.data_as_kv = str(data)
@@ -59,20 +70,30 @@ class ExtraDataLogFormatter(logging.Formatter):
     def format(self, record):
         """Add the 'data_as_kv' attribute before formatting message."""
         self._set_data_as_kv(record)
-        return super(ExtraDataLogFormatter, self).format(record)
+        return super().format(record)
 
 
 DEFAULT_LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "standard": {"()": ExtraDataLogFormatter, "format": "%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s"},
+        "standard": {
+            "()": ExtraDataLogFormatter,
+            "format": "%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s",
+        },
         # 'json': {
         #     '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
         #     'format': '%(asctime)s %(process)d [%(levelname)s] %(name)s.%(funcName)s: %(message)s; %(data_as_kv)s'
         # }
     },
     "filters": {"add_exception_report": {"()": AddExceptionReportFilter}},
-    "handlers": {"console": {"level": "DEBUG", "filters": ["add_exception_report"], "class": "logging.StreamHandler", "formatter": "standard"}},
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "filters": ["add_exception_report"],
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        }
+    },
     "loggers": {"": {"handlers": ["console"], "level": "INFO", "propagate": True}},
 }

@@ -1,7 +1,12 @@
 import json
 import os
 
-from exception_reports.reporter import render_exception_html, render_exception_json, get_exception_data, get_lines_from_file
+from exception_reports.reporter import (
+    get_exception_data,
+    get_lines_from_file,
+    render_exception_html,
+    render_exception_json,
+)
 from exception_reports.storages import LocalErrorStorage
 
 
@@ -36,7 +41,7 @@ def test_exception_report_data():
 
 
 def test_report_from_json():
-    """If we make the html report from the json data is it identical?"""
+    """If we make the html report from the json data is it identical?."""
 
     class CustomException(Exception):
         pass
@@ -161,11 +166,12 @@ def test_rendering_unicode_error(tmpdir):
     html = render_exception_html(exception_data)
     assert "string that could not be encoded" in html
     storage_backend = LocalErrorStorage(output_path=str(tmpdir))
-    storage_backend.write("bug_report.html", html)
+    # storage_backend = LocalErrorStorage(output_path=TESTS_DIR)
+    storage_backend.write("example_report.html", html)
 
 
 def test_saving_unicode_error(tmpdir):
-    bad_url = "http://badwebsite.circleup.com/in\udcaedex.html"
+    bad_url = "http://badwebsite.example.com/in\udcaedex.html"
     try:
         bad_url.encode("utf8")
     except UnicodeEncodeError:
@@ -186,6 +192,10 @@ def test_exception_data_json():
 
 
 def test_bad_sourcefile():
-    empty_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "__init__.py")
-    lower_bound, pre_context, context_line, post_context = get_lines_from_file(empty_file, 999, 4)
+    empty_file = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "__init__.py"
+    )
+    lower_bound, pre_context, context_line, post_context = get_lines_from_file(
+        empty_file, 999, 4
+    )
     assert "There was an error displaying the source" in context_line

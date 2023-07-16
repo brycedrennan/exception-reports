@@ -1,19 +1,19 @@
 import functools
 import json
 import logging
+import platform
 import re
 import sys
 import types
 from contextlib import suppress
-from datetime import datetime, date, timezone
+from datetime import date, datetime, timezone
 from html import escape
 from pathlib import Path
 from pprint import pformat, saferepr
-import platform
 
 import jinja2
 
-from exception_reports.traceback import get_logger_traceback, TracebackFrameProxy
+from exception_reports.traceback import TracebackFrameProxy, get_logger_traceback
 from exception_reports.utils import force_text, gen_error_filename
 
 logger = logging.getLogger(__name__)
@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 @functools.lru_cache()
 def _report_template():
-    """get the report template"""
+    """get the report template."""
     current_dir = Path(__file__).parent
 
-    with open(current_dir / "report_template.html", "r") as f:
+    with open(current_dir / "report_template.html", "r", encoding="utf-8") as f:
         template = f.read()
         template = re.sub(r"\s{2,}", " ", template)
         template = re.sub(r"\n", "", template)
@@ -33,20 +33,24 @@ def _report_template():
 
 
 def render_exception_html(exception_data, report_template=None):
-    """Render exception_data as an html report"""
+    """Render exception_data as an html report."""
     report_template = report_template or _report_template()
-    jinja_env = jinja2.Environment(loader=jinja2.BaseLoader(), extensions=["jinja2.ext.autoescape"])
+    jinja_env = jinja2.Environment(
+        loader=jinja2.BaseLoader(),
+        extensions=[],
+        autoescape=jinja2.select_autoescape(["html", "htm", "xml"]),
+    )
     exception_data["repr"] = repr
     return jinja_env.from_string(report_template).render(exception_data)
 
 
 def render_exception_json(exception_data):
-    """Render exception_data as a json object"""
+    """Render exception_data as a json object."""
     return json.dumps(exception_data, default=_json_serializer)
 
 
 def _json_serializer(obj):
-    """JSON serializer for objects not serializable by default json code"""
+    """JSON serializer for objects not serializable by default json code."""
     if isinstance(obj, (datetime, date)):
         return obj.isoformat(sep=" ")
 
@@ -56,7 +60,13 @@ def _json_serializer(obj):
     return saferepr(obj)
 
 
-def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=False, max_var_length=4096 + 2048):
+def get_exception_data(
+    exc_type=None,
+    exc_value=None,
+    tb=None,
+    get_full_tb=False,
+    max_var_length=4096 + 2048,
+):
     """
     Return a dictionary containing exception information.
 
@@ -80,11 +90,14 @@ def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=False
             for k, v in frame["vars"]:
                 try:
                     v = pformat(v)
-                except Exception as e:
+                except Exception as e:  # noqa: W0718
                     try:
                         v = saferepr(e)
-                    except Exception:
-                        v = "An error occurred rendering the exception of type: " + repr(e.__class__)
+                    except Exception:  # noqa: W0718
+                        v = (
+                            "An error occurred rendering the exception of type: "
+                            + repr(e.__class__)
+                        )
                 # The force_escape filter assume unicode, make sure that works
                 if isinstance(v, bytes):
                     v = v.decode("utf-8", "replace")  # don't choke on non-utf-8 input
@@ -101,7 +114,11 @@ def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=False
         end = getattr(exc_value, "end", None)
         if start is not None and end is not None:
             unicode_str = exc_value.args[1]
-            unicode_hint = force_text(unicode_str[max(start - 5, 0) : min(end + 5, len(unicode_str))], "ascii", errors="replace")
+            unicode_hint = force_text(
+                unicode_str[max(start - 5, 0) : min(end + 5, len(unicode_str))],
+                "ascii",
+                errors="replace",
+            )
             try:
                 unicode_hint.encode("utf8")
             except UnicodeEncodeError:
@@ -111,7 +128,7 @@ def get_exception_data(exc_type=None, exc_value=None, tb=None, get_full_tb=False
         "unicode_hint": unicode_hint,
         "frames": frames,
         "sys_executable": sys.executable,
-        "sys_version_info": "%d.%d.%d" % sys.version_info[0:3],
+        "sys_version_info": "%d.%d.%d" % sys.version_info[0:3],  # noqa: C0209
         "server_time": datetime.now(timezone.utc),
         "sys_path": sys.path,
         "platform": platform.uname()._asdict(),
@@ -153,7 +170,7 @@ def get_lines_from_file(filename, lineno, context_lines, loader=None, module_nam
             for line in source[:2]:
                 # File coding may be specified. Match pattern from PEP-263
                 # (http://www.python.org/dev/peps/pep-0263/)
-                match = re.search(br"coding[:=]\s*([-\w.]+)", line)
+                match = re.search(rb"coding[:=]\s*([-\w.]+)", line)
                 if match:
                     encoding = match.group(1).decode("ascii")
                     break
@@ -167,10 +184,10 @@ def get_lines_from_file(filename, lineno, context_lines, loader=None, module_nam
         post_context = source[lineno + 1 : upper_bound]
 
         return lower_bound, pre_context, context_line, post_context
-    except Exception as e:
+    except Exception as e:  # noqa: W0718
         try:
             context_line = f'<There was an error displaying the source file: "{repr(e)}"  The loaded source has {len(source)} lines.>'
-        except Exception:
+        except Exception:  # noqa: W0718
             context_line = "<There was an error displaying the source file. Further, there was an error displaying that error>"
         return lineno, [], context_line, []
 
@@ -207,7 +224,12 @@ def get_traceback_frames(exc_value=None, tb=None, get_full_tb=True):
         lineno = tb.tb_lineno - 1
         loader = tb.tb_frame.f_globals.get("__loader__")
         module_name = tb.tb_frame.f_globals.get("__name__") or ""
-        pre_context_lineno, pre_context, context_line, post_context = get_lines_from_file(filename, lineno, 7, loader, module_name)
+        (
+            pre_context_lineno,
+            pre_context,
+            context_line,
+            post_context,
+        ) = get_lines_from_file(filename, lineno, 7, loader, module_name)
         if pre_context_lineno is None:
             pre_context_lineno = lineno
             pre_context = []
@@ -250,11 +272,21 @@ def get_traceback_frames(exc_value=None, tb=None, get_full_tb=True):
     return frames
 
 
-def create_exception_report(exc_type, exc_value, tb, output_format, storage_backend, data_processor=None, get_full_tb=False):
+def create_exception_report(
+    exc_type,
+    exc_value,
+    tb,
+    output_format,
+    storage_backend,
+    data_processor=None,
+    get_full_tb=False,
+):
     """
-    Create an exception report and return its location
+    Create an exception report and return its location.
     """
-    exception_data = get_exception_data(exc_type, exc_value, tb, get_full_tb=get_full_tb)
+    exception_data = get_exception_data(
+        exc_type, exc_value, tb, get_full_tb=get_full_tb
+    )
     if data_processor:
         exception_data = data_processor(exception_data)
 
@@ -281,10 +313,12 @@ def append_to_exception_message(e, tb, added_message):
     else:
 
         def my_str(self):
-            m = ExceptionType.__str__(self)
+            m = ExceptionType.__str__(self)  # noqa
             return f"{m} {added_message}"
 
-        NewExceptionType = type(ExceptionType.__name__, (ExceptionType,), {"__str__": my_str})
+        NewExceptionType = type(
+            ExceptionType.__name__, (ExceptionType,), {"__str__": my_str}
+        )
 
         e.__class__ = NewExceptionType
     return e
