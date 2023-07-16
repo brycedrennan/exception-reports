@@ -1,0 +1,16 @@
+# dev/testing requirements
+black
+coverage
+isort
+httpretty
+pycln
+pylama
+pylint
+pytest
+pytest-asyncio
+pytest-cov
+pytest-randomly
+pytest-sugar
+pydocstyle
+ruff
+wheel

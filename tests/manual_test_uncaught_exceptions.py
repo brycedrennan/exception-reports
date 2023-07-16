@@ -1,7 +1,7 @@
 import sys
 from logging.config import dictConfig
 
-from exception_reports.logs import uncaught_exception_handler, DEFAULT_LOGGING_CONFIG
+from exception_reports.logs import DEFAULT_LOGGING_CONFIG, uncaught_exception_handler
 
 
 def main():
@@ -18,4 +18,4 @@ def main():
     try:
         raise SpecialArgsException("<strong>YOLO!!!!</strong>", 24)
     except Exception:
-        raise SpecialArgsException("<strong>HELLO</strong>", 34)
+        raise SpecialArgsException("<strong>HELLO</strong>", 34)  # noqa

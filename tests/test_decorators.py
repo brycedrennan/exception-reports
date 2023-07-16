@@ -20,7 +20,7 @@ def test_decorator():
 
     with pytest.raises(SpecialException) as e:
         foobar("hi")
-    assert "report:/tmp" in str(e)
+    assert "report:/tmp" in str(e.value)
 
 
 def test_decorator_json():
@@ -33,7 +33,7 @@ def test_decorator_json():
         assert False
     except SpecialException as e:
         assert "report:/tmp" in str(e)
-        with open(e.report, "r") as f:
+        with open(e.report, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         assert data["exception_type"] == "SpecialException"
@@ -41,7 +41,7 @@ def test_decorator_json():
 
 
 def test_decorator_with_base_exception():
-    """Ensure that the library handles non-subclassed exceptions"""
+    """Ensure that the library handles non-subclassed exceptions."""
 
     @exception_report()
     def foobar(text):
@@ -55,7 +55,7 @@ def test_decorator_with_base_exception():
 
 
 def test_decorator_with_type_exception():
-    """Ensure that the library handles non-subclassed exceptions"""
+    """Ensure that the library handles non-subclassed exceptions."""
 
     @exception_report()
     def foobar(text):
@@ -81,7 +81,7 @@ def test_decorator_with_args_exception():
     with pytest.raises(SpecialArgsException) as e:
         foobar("hi")
 
-    assert "report:/tmp" in str(e)
+    assert "report:/tmp" in str(e.value)
 
 
 @httprettified
@@ -91,7 +91,9 @@ def test_s3_decorator():
 
     httpretty.register_uri(httpretty.PUT, re.compile(r".*amazonaws\..*"), body="")
 
-    storage_backend = S3ErrorStorage(access_key="access_key", secret_key="secret_key", bucket=bucket, prefix=prefix)
+    storage_backend = S3ErrorStorage(
+        access_key="access_key", secret_key="secret_key", bucket=bucket, prefix=prefix
+    )
 
     @exception_report(storage_backend=storage_backend)
     def foobar(text):
@@ -100,19 +102,24 @@ def test_s3_decorator():
     with pytest.raises(SpecialException) as e:
         foobar("hi")
 
-    assert "report:https://" in str(e)
+    assert "report:https://" in str(e.value)
 
 
 @httprettified
 def test_custom_s3_decorator():
-    """Example of creating a custom decorator"""
+    """Example of creating a custom decorator."""
 
     bucket = "my-bucket"
     prefix = "all-exceptions/"
     httpretty.register_uri(httpretty.PUT, re.compile(r".*amazonaws\..*"), body="")
 
     def my_exception_report(f):
-        storage_backend = S3ErrorStorage(access_key="access_key", secret_key="secret_key", bucket=bucket, prefix=prefix)
+        storage_backend = S3ErrorStorage(
+            access_key="access_key",
+            secret_key="secret_key",
+            bucket=bucket,
+            prefix=prefix,
+        )
 
         return exception_report(storage_backend=storage_backend)(f)
 
@@ -127,7 +134,7 @@ def test_custom_s3_decorator():
             assert_expection_spec(e2)
             raise
 
-    assert "report:https://" in str(e)
+    assert "report:https://" in str(e.value)
 
 
 def test_exception_spec():
