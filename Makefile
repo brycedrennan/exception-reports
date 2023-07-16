@@ -43,7 +43,7 @@ deploy:  ## Deploy the package to pypi.org
 	git tag $$(python setup.py -V)
 	git push --tags
 	python setup.py bdist_wheel
-	python setup.py sdist
+	#python setup.py sdist
 	@echo -e 'pypi.org Username: '
 	@read username && twine upload dist/* -u $$username;
 	@echo -e "Deploy successful! ✨ 🍰 ✨"
